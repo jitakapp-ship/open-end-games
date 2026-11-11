@@ -113,9 +113,7 @@ function drawQR(text){
   if(/[\/.]/.test(R.logo||"")){ const img=document.createElement("img"); img.src=R.logo; logo.appendChild(img); }
   else logo.textContent=R.logo||"🍽️";
   $("name").textContent=R.name;
-  const prizes=[...new Set([R.catch&&R.catch.prize,R.memory&&R.memory.prize].filter(Boolean))];
-  $("prizes").innerHTML=prizes.length?"الهدايا: "+prizes.map(p=>"<b></b>").join(" · "):"";
-  $("prizes").querySelectorAll("b").forEach((b,i)=>b.textContent=prizes[i]);
+  $("prizes").innerHTML="🎁 <b>هدايا يومية</b> من "+"<span id=\"pn\"></span>"; $("pn").textContent=R.name;
   const url=new URL("./",location.href).href+"?r="+encodeURIComponent(R.slug);
   $("link").textContent=url;
   drawQR(url);

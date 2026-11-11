@@ -167,7 +167,7 @@ function render(p, expired){
   else if(expired){ cls="expired"; title="⚠️ الكوبون منتهي (مو من اليوم)"; }
   box.className="res show "+cls;
   $("resTitle").textContent=title;
-  $("resPrize").textContent=p.prize||"";
+  $("resPrize").textContent="🎁 هدية";
   $("resCode").textContent=p.code;
   $("resGame").textContent=GAME_NAMES[p.game]||p.game;
   $("resTime").textContent=fmt(p.finished_at);

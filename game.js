@@ -320,8 +320,8 @@ function showResult(p, fresh, extra, failMsg){
     $("couponBlock").style.display="none";
   }else{
     $("rEmoji").textContent = p.redeemed ? "✅" : "🎉";
-    $("rTitle").textContent = p.redeemed ? "استلمت هديتك" : "مبروك! ربحت";
-    $("rPrize").textContent=p.prize;
+    $("rTitle").textContent = p.redeemed ? "استلمت هديتك" : "مبروك!";
+    $("rPrize").textContent = p.redeemed ? "" : "لقد ربحت هدية 🎁";
     $("rExtra").textContent=extra||"";
     $("rRestName").textContent="كوبون "+REST.name;
     $("rCode").textContent=p.code;
@@ -364,9 +364,9 @@ function applyRestaurant(){
   $("rName").textContent=REST.name;
   $("rTag").textContent=REST.tagline||"";
   $("catchChip1").textContent="⏱ "+REST.catch.seconds+" ثانية · 🎯 "+REST.catch.target;
-  $("catchChip2").textContent="🎁 "+REST.catch.prize;
+  $("catchChip2").textContent="🎁 هدية";
   $("memChip1").textContent="⏱ "+REST.memory.seconds+" ثانية";
-  $("memChip2").textContent="🎁 "+REST.memory.prize;
+  $("memChip2").textContent="🎁 هدية";
   document.title="العب واربح — "+REST.name;
 }
 async function init(){
