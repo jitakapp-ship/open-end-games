@@ -7,7 +7,7 @@ window.APP = {
   SUPABASE_KEY: "sb_publishable_DzyBNO9y42ZwYkxq5iaUSg_j21cIEiz",   // المفتاح العام
 
   COMPANY: {
-    name: "Open End Company", // اسم الشركة — يظهر أسفل كل صفحة
+    name: "Open End Technology", // اسم الشركة — يظهر أسفل كل صفحة
     website: "",           // اختياري
   },
 };

@@ -128,6 +128,10 @@
         <p class="small" id="wrHint"></p>
         <label for="lim">أقصى عدد هدايا باليوم</label>
         <input id="lim" type="number" inputmode="numeric" min="0" max="10000">
+        <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text);margin:2px 0 12px;cursor:pointer">
+          <input type="checkbox" id="strict" style="width:22px;height:22px;margin:3px 0 0;flex:none;accent-color:var(--accent)">
+          <span><b>قفل صارم</b><br><span class="small" style="display:block;margin:2px 0 0">يمنع نفس التلفون يلعب مرة ثانية خلال 24 ساعة حتى لو بدّل المتصفح أو فتح خفي. نادراً ممكن يمنع زبون ثاني عنده نفس نوع التلفون ومتصل بنفس الواي فاي.</span></span>
+        </label>
         <p class="err" id="ownerErr2"></p>
         <p class="okmsg" id="ownerOk"></p>
         <button class="btn" id="saveOwner">حفظ الإعدادات</button>
@@ -241,7 +245,7 @@ async function ownerOpen(){
     const r=await api("game_owner_get",{p_slug:S.slug,p_pin:pin});
     if(!r||r.error){ $("ownerErr").textContent="رمز المالك غلط"; return; }
     OWNER_PIN=pin; $("ownerPin").value="";
-    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; wrHint();
+    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; $("strict").checked=r.strict_lock!==false; wrHint();
     $("ownerLogin").classList.add("hidden"); $("ownerForm").classList.remove("hidden");
   }catch(e){ $("ownerErr").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
   finally{ $("ownerBtn").disabled=false; }
@@ -252,9 +256,9 @@ async function ownerSave(){
   if(isNaN(lim)||lim<0){ $("ownerErr2").textContent="اكتب رقم صحيح لعدد الهدايا"; return; }
   $("saveOwner").disabled=true;
   try{
-    const r=await api("game_owner_set",{p_slug:S.slug,p_pin:OWNER_PIN,p_win_percent:pct,p_daily_limit:lim});
+    const r=await api("game_owner_set",{p_slug:S.slug,p_pin:OWNER_PIN,p_win_percent:pct,p_daily_limit:lim,p_strict_lock:$("strict").checked});
     if(!r||r.error){ $("ownerErr2").textContent = r&&r.error==="bad_pin" ? "انتهت الجلسة، افتح الإعدادات من جديد" : "القيم غير صحيحة"; return; }
-    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; wrHint();
+    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; $("strict").checked=r.strict_lock!==false; wrHint();
     $("ownerOk").textContent="✅ انحفظت — تشتغل من هسه";
     loadStats();
   }catch(e){ $("ownerErr2").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }

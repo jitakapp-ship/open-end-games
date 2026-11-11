@@ -21,7 +21,38 @@ function makeId(){
   try{ if(crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
   return Date.now().toString(36)+Math.random().toString(36).slice(2,14);
 }
-const DEVICE = lsGet("rg_device") || (()=>{ const d=makeId(); lsSet("rg_device",d); return d; })();
+function cookieGet(k){ try{ const m=document.cookie.match(new RegExp("(?:^|; )"+k+"=([^;]*)")); return m?decodeURIComponent(m[1]):null; }catch(e){ return null; } }
+function cookieSet(k,v){ try{ document.cookie=k+"="+encodeURIComponent(v)+"; max-age=31536000; path=/; SameSite=Lax"+(location.protocol==="https:"?"; Secure":""); }catch(e){} }
+const DEVICE = (()=>{ let d=lsGet("rg_device")||cookieGet("rg_device"); if(!d||d.length<8) d=makeId(); lsSet("rg_device",d); cookieSet("rg_device",d); return d; })();
+
+// بصمة الجهاز: أشياء ثابتة بالتلفون نفسه، ما تتغير إذا بدّل المتصفح أو فتح خفي
+async function computeFP(){
+  const parts=[];
+  try{
+    const s=window.screen||{};
+    parts.push([s.width||0,s.height||0].sort((a,b)=>a-b).join("x"), window.devicePixelRatio||1, s.colorDepth||0);
+    try{ parts.push(Intl.DateTimeFormat().resolvedOptions().timeZone||""); }catch(e){ parts.push(""); }
+    parts.push((navigator.language||"").slice(0,2).toLowerCase());
+    const ua=navigator.userAgent||"";
+    const ios=ua.match(/(?:iPhone|iPad|iPod).*? OS (\d+)[_.](\d+)/), and=ua.match(/Android (\d+)/);
+    parts.push(ios ? "ios"+ios[1]+"."+ios[2] : and ? "android"+and[1] : (navigator.platform||""));
+    parts.push(navigator.maxTouchPoints||0);
+    try{
+      const c=document.createElement("canvas"), gl=c.getContext("webgl")||c.getContext("experimental-webgl");
+      const ext=gl&&gl.getExtension("WEBGL_debug_renderer_info");
+      parts.push(ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)||"") : "");
+    }catch(e){ parts.push(""); }
+  }catch(e){}
+  const txt=parts.join("|");
+  try{
+    const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+    return Array.from(new Uint8Array(buf)).slice(0,16).map(b=>b.toString(16).padStart(2,"0")).join("");
+  }catch(e){
+    let h=0; for(let i=0;i<txt.length;i++){ h=(h*31+txt.charCodeAt(i))|0; } return "s"+(h>>>0).toString(16);
+  }
+}
+let FP=null;
+let lockInfo=null;   // تلفون لعب من متصفح ثاني خلال 24 ساعة
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function buzz(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
 function foods(){ const f=REST.foods&&REST.foods.length>=6?REST.foods:DEFAULT_FOODS; return f.slice(0,6); }
@@ -48,7 +79,19 @@ function showLoading(msg, retryFn){
   b.onclick = retryFn || null;
   show("loading");
 }
-function blocked(){ return !!(REST && REST.one_play_per_day && todayPlay); }
+function blocked(){ return !!(REST && REST.one_play_per_day && (todayPlay || lockInfo)); }
+function nextAt(){
+  if(lockInfo && lockInfo.next_at) return new Date(lockInfo.next_at);
+  if(todayPlay && todayPlay.started_at) return new Date(new Date(todayPlay.started_at).getTime()+864e5);
+  return null;
+}
+function waitText(){
+  const n=nextAt(); if(!n) return "";
+  const ms=n.getTime()-Date.now(); if(ms<=0) return "تكدر تلعب هسه — حدّث الصفحة";
+  const t=Math.ceil(ms/6e4), h=Math.floor(t/60), m=t%60;
+  const parts=[]; if(h>0) parts.push(h+" ساعة"); if(m>0) parts.push(m+" دقيقة");
+  return "تكدر تلعب مرة ثانية بعد "+parts.join(" و ");
+}
 function gameRunning(){ return (cg && !cg.done) || (mem && !mem.done) || (pg && !pg.done); }
 function stopAll(){ stopMemory(); stopCatch(); stopPour(); }
 function goHome(){ stopAll(); refreshHome(); show("home"); }
@@ -56,6 +99,10 @@ function refreshHome(){
   const b=blocked();
   $("goCatch").disabled=b; $("goMemory").disabled=b; $("goPour").disabled=b;
   $("played").style.display=b?"block":"none";
+  if(b){
+    $("playedMsg").textContent = (todayPlay ? "✅ لعبت خلال آخر 24 ساعة. " : "⏳ هذا التلفون لعب خلال آخر 24 ساعة. ") + waitText();
+    $("showMine").style.display = todayPlay ? "inline-block" : "none";
+  }
   $("ruleTxt").style.display=REST.one_play_per_day?"block":"none";
 }
 
@@ -85,8 +132,12 @@ async function startGame(game){
   const ids={catch:"goCatch",memory:"goMemory",pour:"goPour"};
   const btn=$(ids[game]); btn.classList.add("loading");
   try{
-    const res = await api("game_start",{p_slug:SLUG,p_device:DEVICE,p_game:game,p_table:null});
+    const res = await api("game_start",{p_slug:SLUG,p_device:DEVICE,p_game:game,p_table:null,p_fp:FP});
     if(!res || res.error) throw new Error(res && res.error);
+    if(res.already && res.locked){
+      lockInfo={next_at:res.next_at}; refreshHome(); show("home");
+      return toast("هذا التلفون لعب خلال آخر 24 ساعة");
+    }
     todayPlay = res.play;
     if(res.already){ refreshHome(); return openRecord(res.play); }
     curPlay = res.play;
@@ -181,7 +232,7 @@ function catchHud(left){
 function spawn(p){
   const bad=Math.random()<0.16+0.12*p;
   cg.items.push({ bad, e: bad?"💣":cg.foods[Math.floor(Math.random()*cg.foods.length)],
-    x: 26+Math.random()*(cg.W-52), y:-30, v:(160+240*p)*(0.85+Math.random()*0.35),
+    x: 26+Math.random()*(cg.W-52), y:-30, v:(240+320*p)*(0.85+Math.random()*0.35),
     r:0, vr:(Math.random()-.5)*3 });
 }
 function catchLoop(t){
@@ -189,7 +240,7 @@ function catchLoop(t){
   const dt=Math.min(0.05,(t-cg.last)/1000); cg.last=t;
   const el=(t-cg.started)/1000, C=cg.C, left=C.seconds-el, p=Math.min(1,el/C.seconds);
   cg.acc+=dt*1000;
-  if(cg.acc>=650-320*p){ cg.acc=0; spawn(p); }
+  if(cg.acc>=480-240*p){ cg.acc=0; spawn(p); }
   const by=cg.H-44;
   cg.items=cg.items.filter(it=>{
     it.y+=it.v*dt; it.r+=it.vr*dt;
@@ -524,7 +575,10 @@ async function init(){
     REST = await api("game_get_restaurant",{p_slug:SLUG});
     if(!REST) return show("noRest");
     applyRestaurant();
-    todayPlay = await api("game_today_play",{p_slug:SLUG,p_device:DEVICE});
+    FP = await computeFP();
+    const st = await api("game_check",{p_slug:SLUG,p_device:DEVICE,p_fp:FP}) || {};
+    todayPlay = st.own ? st.play : null;
+    lockInfo = (st.next_at && !st.own) ? {next_at:st.next_at} : null;
     refreshHome(); show("home");
   }catch(e){
     showLoading("ما كدرنا نتصل. تأكد من الإنترنت.", init);
