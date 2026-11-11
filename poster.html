@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>بوستر الباركود</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{--accent:#F2A541;--accent2:#E85D3A;--ink:#1a1410}
+  @page{size:A4 portrait;margin:0}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#e9e4de;font-family:'Cairo',system-ui,sans-serif;color:var(--ink);
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .bar{position:sticky;top:0;z-index:5;display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;
+    padding:12px;background:#1a1410;color:#fff}
+  .bar button{font-family:inherit;font-weight:900;font-size:1rem;border:0;border-radius:10px;padding:10px 22px;background:var(--accent);color:#1a1410;cursor:pointer}
+  .bar span{font-size:.9rem;opacity:.8;direction:ltr}
+  .sheet{width:210mm;height:297mm;margin:16px auto;background:#fff;position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;text-align:center;padding:18mm 16mm 12mm;box-shadow:0 10px 40px rgba(0,0,0,.18)}
+  .band{position:absolute;inset:0 0 auto 0;height:92mm;background:linear-gradient(150deg,var(--accent),var(--accent2));
+    clip-path:ellipse(85% 100% at 50% 0)}
+  .top{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center}
+  .logo{width:34mm;height:34mm;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:20mm;overflow:hidden;
+    box-shadow:0 4mm 10mm rgba(0,0,0,.18)}
+  .logo img{width:100%;height:100%;object-fit:cover}
+  .name{font-size:15mm;font-weight:900;color:#fff;margin:4mm 0 0;line-height:1.2;text-shadow:0 1mm 3mm rgba(0,0,0,.2)}
+  .headline{margin:16mm 0 2mm;font-size:17mm;font-weight:900;line-height:1.15}
+  .headline em{font-style:normal;color:var(--accent2)}
+  .sub{font-size:6mm;font-weight:700;color:#5a4a3e;margin:0 0 7mm}
+  .qrbox{padding:6mm;border-radius:8mm;border:2.2mm solid var(--accent);background:#fff}
+  #qr{display:block;width:92mm;height:92mm}
+  .steps{display:flex;justify-content:center;gap:6mm;margin:9mm 0 0}
+  .step{width:44mm;padding:4mm 2mm;border-radius:5mm;background:#faf4ec}
+  .step b{display:block;font-size:10mm;line-height:1.1}
+  .step span{font-size:5mm;font-weight:700}
+  .prizes{margin:7mm 0 0;font-size:5.6mm;font-weight:700}
+  .prizes b{color:var(--accent2)}
+  .note{margin:3mm 0 0;font-size:4.4mm;color:#6b5a4c}
+  .foot{margin-top:auto;font-size:4mm;color:#8a7969;letter-spacing:.3mm}
+  .foot b{color:var(--ink)}
+  .msg{max-width:520px;margin:40px auto;padding:20px;background:#fff;border-radius:14px;text-align:center;font-weight:700}
+  @media print{
+    html,body{background:#fff}
+    .bar{display:none}
+    .sheet{margin:0;box-shadow:none}
+  }
+  @media screen and (max-width:820px){
+    .sheet{transform-origin:top center;transform:scale(calc(100vw / 220mm));margin-bottom:calc(297mm * (100vw / 220mm) - 297mm)}
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button onclick="window.print()">🖨️ اطبع البوستر</button>
+  <span id="link"></span>
+</div>
+
+<div id="msg" class="msg" style="display:none"></div>
+
+<div class="sheet" id="sheet" style="display:none">
+  <div class="band"></div>
+  <div class="top">
+    <div class="logo" id="logo"></div>
+    <div class="name" id="name"></div>
+  </div>
+
+  <div class="headline">امسح <em>·</em> العب <em>·</em> اربح</div>
+  <p class="sub">العب لعبة سريعة وانت تنتظر طلبك… ويمكن تربح هدية!</p>
+
+  <div class="qrbox"><svg id="qr" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"></svg></div>
+
+  <div class="steps">
+    <div class="step"><b>📷</b><span>امسح الباركود</span></div>
+    <div class="step"><b>🎮</b><span>العب أقل من دقيقة</span></div>
+    <div class="step"><b>🎁</b><span>راوي الكوبون للكاشير</span></div>
+  </div>
+
+  <p class="prizes" id="prizes"></p>
+  <p class="note">الهدية تُستلم من الكاشير داخل المطعم وبنفس اليوم · لعبة وحدة يومياً</p>
+
+  <div class="foot">مقدّم من <b id="company"></b></div>
+</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="qr.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const slug=(new URLSearchParams(location.search).get("r")||"").trim().toLowerCase();
+$("company").textContent=(window.APP&&APP.COMPANY&&APP.COMPANY.name)||"";
+
+function msg(t){ $("msg").textContent=t; $("msg").style.display="block"; }
+function drawQR(text){
+  const m=window.qrMatrix(text,"M"), n=m.length, q=4, size=n+q*2, svg=$("qr");
+  svg.setAttribute("viewBox","0 0 "+size+" "+size);
+  let d="";
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(m[r][c]) d+="M"+(c+q)+" "+(r+q)+"h1v1h-1z";
+  svg.innerHTML='<rect width="'+size+'" height="'+size+'" fill="#fff"/><path d="'+d+'" fill="#000"/>';
+}
+(async function(){
+  if(!slug) return msg("أضف معرّف المطعم للرابط، مثلاً: poster.html?r=qalb-almadina");
+  if(!window.apiReady()) return msg("لازم تحط رابط ومفتاح Supabase بملف config.js");
+  let R;
+  try{ R=await api("game_get_restaurant",{p_slug:slug}); }catch(e){ return msg("ما كدرنا نتصل بالسيرفر"); }
+  if(!R) return msg("ما لكينا مطعم بهذا المعرّف: "+slug);
+  if(R.colors){ const s=document.documentElement.style;
+    if(R.colors.primary) s.setProperty("--accent",R.colors.primary);
+    if(R.colors.secondary) s.setProperty("--accent2",R.colors.secondary); }
+  const logo=$("logo");
+  if(/[\/.]/.test(R.logo||"")){ const img=document.createElement("img"); img.src=R.logo; logo.appendChild(img); }
+  else logo.textContent=R.logo||"🍽️";
+  $("name").textContent=R.name;
+  const prizes=[...new Set([R.catch&&R.catch.prize,R.memory&&R.memory.prize].filter(Boolean))];
+  $("prizes").innerHTML=prizes.length?"الهدايا: "+prizes.map(p=>"<b></b>").join(" · "):"";
+  $("prizes").querySelectorAll("b").forEach((b,i)=>b.textContent=prizes[i]);
+  const url=new URL("./",location.href).href+"?r="+encodeURIComponent(R.slug);
+  $("link").textContent=url;
+  drawQR(url);
+  document.title="بوستر — "+R.name;
+  $("sheet").style.display="flex";
+})();
+</script>
+</body>
+</html>

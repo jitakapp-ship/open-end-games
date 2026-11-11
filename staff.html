@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#14110f">
+<title>صفحة الكاشير</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#14110f;--card:#221c18;--line:rgba(255,255,255,.09);--text:#fff7ec;--muted:#b9a897;--accent:#F2A541;--ok:#3fbf7f;--bad:#ff5a4f;--warn:#f5c04a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Cairo',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  button,input{font-family:inherit}
+  .wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  header h1{font-size:1.25rem;margin:0}
+  header small{color:var(--muted);display:block;font-weight:400}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+  label{display:block;font-size:.9rem;color:var(--muted);margin:0 0 6px}
+  input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#16120f;color:var(--text);font-size:1.05rem;margin-bottom:12px;outline:none}
+  input:focus{border-color:var(--accent)}
+  #code{font-size:1.6rem;font-weight:900;letter-spacing:3px;text-align:center;direction:ltr;text-transform:uppercase;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .btn{width:100%;border:0;border-radius:12px;padding:13px;font-size:1.05rem;font-weight:900;background:var(--accent);color:#1a1410;cursor:pointer}
+  .btn:disabled{opacity:.5}
+  .btn.ok{background:var(--ok);color:#06210f}
+  .link{background:none;border:0;color:var(--muted);cursor:pointer;font-size:.9rem;text-decoration:underline}
+  .err{color:var(--bad);font-weight:700;min-height:1.4em;margin:0 0 8px}
+  .res{border-radius:16px;padding:16px;margin-top:14px;display:none}
+  .res.show{display:block}
+  .res.valid{background:rgba(63,191,127,.12);border:1px solid rgba(63,191,127,.45)}
+  .res.used{background:rgba(255,90,79,.1);border:1px solid rgba(255,90,79,.45)}
+  .res.expired{background:rgba(245,192,74,.1);border:1px solid rgba(245,192,74,.45)}
+  .res h2{margin:0 0 6px;font-size:1.3rem}
+  .res .prize{font-size:1.7rem;font-weight:900;color:var(--accent);margin:4px 0 10px}
+  .res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 12px;font-size:.95rem}
+  .res dt{color:var(--muted)}
+  .res dd{margin:0;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+  .stat{background:#16120f;border-radius:12px;padding:10px 4px}
+  .stat b{display:block;font-size:1.5rem}
+  .stat span{font-size:.78rem;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:12px}
+  th,td{padding:7px 4px;text-align:center;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:700}
+  .row{display:flex;justify-content:space-between;align-items:center}
+  .foot{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- تسجيل الدخول -->
+  <section id="login">
+    <header><h1>🔐 صفحة الكاشير<small>التحقق من كوبونات الألعاب</small></h1></header>
+    <div class="card">
+      <div id="slugBox">
+        <label for="slug">معرّف المطعم</label>
+        <input id="slug" autocomplete="off" autocapitalize="off" placeholder="مثلاً: demo" dir="ltr">
+      </div>
+      <label for="pin">رمز الكاشير</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••">
+      <p class="err" id="loginErr"></p>
+      <button class="btn" id="loginBtn">دخول</button>
+    </div>
+  </section>
+
+  <!-- لوحة الكاشير -->
+  <section id="panel" class="hidden">
+    <header>
+      <h1 id="restName">—<small>صفحة الكاشير</small></h1>
+      <button class="link" id="logout">خروج</button>
+    </header>
+
+    <div class="card">
+      <label for="code">رمز الكوبون</label>
+      <input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC12">
+      <p class="err" id="codeErr"></p>
+      <button class="btn" id="checkBtn">تحقق</button>
+
+      <div class="res" id="res">
+        <h2 id="resTitle"></h2>
+        <div class="prize" id="resPrize"></div>
+        <dl>
+          <dt>الرمز</dt><dd id="resCode" dir="ltr" style="text-align:right"></dd>
+          <dt>اللعبة</dt><dd id="resGame"></dd>
+          <dt>وقت الربح</dt><dd id="resTime"></dd>
+          <dt id="resUsedL">وقت الاستخدام</dt><dd id="resUsed"></dd>
+        </dl>
+        <button class="btn ok" id="redeemBtn">✅ تأكيد تسليم الهدية</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row"><b>📊 اليوم</b><button class="link" id="refresh">تحديث</button></div>
+      <div class="stats" style="margin-top:10px">
+        <div class="stat"><b id="sPlays">0</b><span>لعبوا</span></div>
+        <div class="stat"><b id="sWon">0</b><span>ربحوا</span></div>
+        <div class="stat"><b id="sRedeemed">0</b><span>استلموا</span></div>
+        <div class="stat"><b id="sLeft">0</b><span>هدايا باقية</span></div>
+      </div>
+      <table>
+        <thead><tr><th>اليوم</th><th>لعبوا</th><th>نجحوا</th><th>ربحوا</th><th>استلموا</th></tr></thead>
+        <tbody id="days"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="foot">مقدّم من <b id="company"></b></div>
+</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const params=new URLSearchParams(location.search);
+const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق"};
+let S={slug:(params.get("r")||"").toLowerCase(), pin:""};
+let current=null;
+
+$("company").textContent=(window.APP&&APP.COMPANY&&APP.COMPANY.name)||"";
+if(S.slug) $("slugBox").classList.add("hidden");
+try{ const saved=JSON.parse(sessionStorage.getItem("staff")||"null"); if(saved&&(!S.slug||saved.slug===S.slug)) S=saved; }catch(e){}
+
+function fmt(iso){ if(!iso) return "—"; const d=new Date(iso);
+  try{ return d.toLocaleString("ar-IQ",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"numeric"}); }catch(e){ return d.toLocaleString(); } }
+function dayName(d){ try{ return new Date(d+"T12:00:00").toLocaleDateString("ar-IQ",{weekday:"short",day:"numeric",month:"numeric"}); }catch(e){ return d; } }
+
+async function login(){
+  const slug=(S.slug||$("slug").value).trim().toLowerCase(), pin=$("pin").value.trim();
+  if(!window.apiReady()){ $("loginErr").textContent="لازم تحط رابط ومفتاح Supabase بملف config.js"; return; }
+  if(!slug||!pin){ $("loginErr").textContent="اكتب المعرّف والرمز"; return; }
+  $("loginBtn").disabled=true; $("loginErr").textContent="";
+  try{
+    const r=await api("game_staff_check",{p_slug:slug,p_pin:pin,p_code:""});
+    if(!r||r.error){ $("loginErr").textContent="المعرّف أو الرمز غلط"; return; }
+    S={slug,pin}; try{ sessionStorage.setItem("staff",JSON.stringify(S)); }catch(e){}
+    openPanel();
+  }catch(e){ $("loginErr").textContent="ما كدرنا نتصل — تأكد من الإنترنت"; }
+  finally{ $("loginBtn").disabled=false; }
+}
+function openPanel(){
+  $("login").classList.add("hidden"); $("panel").classList.remove("hidden");
+  $("code").focus(); loadStats();
+}
+function logout(){ try{ sessionStorage.removeItem("staff"); }catch(e){} location.reload(); }
+
+async function check(){
+  const code=$("code").value.trim().toUpperCase();
+  if(!code) return;
+  $("checkBtn").disabled=true; $("codeErr").textContent=""; $("res").className="res";
+  try{
+    const r=await api("game_staff_check",{p_slug:S.slug,p_pin:S.pin,p_code:code});
+    if(r&&r.error==="bad_pin") return logout();
+    if(!r||r.error){ $("codeErr").textContent="❌ الرمز غير موجود — تأكد منه"; return; }
+    current=r.play; render(r.play, r.expired);
+  }catch(e){ $("codeErr").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
+  finally{ $("checkBtn").disabled=false; }
+}
+function render(p, expired){
+  const box=$("res");
+  let cls="valid", title="✅ كوبون صالح";
+  if(p.redeemed){ cls="used"; title="⛔ هذا الكوبون مستخدم سابقاً"; }
+  else if(expired){ cls="expired"; title="⚠️ الكوبون منتهي (مو من اليوم)"; }
+  box.className="res show "+cls;
+  $("resTitle").textContent=title;
+  $("resPrize").textContent=p.prize||"";
+  $("resCode").textContent=p.code;
+  $("resGame").textContent=GAME_NAMES[p.game]||p.game;
+  $("resTime").textContent=fmt(p.finished_at);
+  $("resUsed").textContent=fmt(p.redeemed_at);
+  $("resUsed").style.display=$("resUsedL").style.display=p.redeemed?"block":"none";
+  $("redeemBtn").style.display=(!p.redeemed&&!expired)?"block":"none";
+}
+async function redeem(){
+  if(!current) return;
+  $("redeemBtn").disabled=true;
+  try{
+    const r=await api("game_staff_redeem",{p_slug:S.slug,p_pin:S.pin,p_code:current.code});
+    if(r&&r.error==="bad_pin") return logout();
+    if(r&&r.play){ current=r.play; render(r.play, r.error==="expired"); }
+    if(r&&r.ok){ $("resTitle").textContent="🎉 تم تسليم الهدية"; $("code").value=""; loadStats(); }
+    else if(r&&r.error==="already") $("codeErr").textContent="هذا الكوبون انستخدم قبل";
+  }catch(e){ $("codeErr").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
+  finally{ $("redeemBtn").disabled=false; }
+}
+async function loadStats(){
+  try{
+    const r=await api("game_staff_stats",{p_slug:S.slug,p_pin:S.pin});
+    if(!r||r.error) return;
+    $("restName").firstChild.textContent=r.name;
+    const t=r.days[0]||{plays:0,won:0,redeemed:0};
+    $("sPlays").textContent=t.plays; $("sWon").textContent=t.won; $("sRedeemed").textContent=t.redeemed;
+    $("sLeft").textContent=Math.max(0,r.daily_prize_limit-t.won);
+    $("days").innerHTML=r.days.map(d=>`<tr><td>${dayName(d.date)}</td><td>${d.plays}</td><td>${d.passed}</td><td>${d.won}</td><td>${d.redeemed}</td></tr>`).join("");
+  }catch(e){}
+}
+
+$("loginBtn").onclick=login;
+$("pin").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
+$("checkBtn").onclick=check;
+$("code").addEventListener("keydown",e=>{ if(e.key==="Enter") check(); });
+$("code").addEventListener("input",()=>{ $("res").className="res"; $("codeErr").textContent=""; });
+$("redeemBtn").onclick=redeem;
+$("refresh").onclick=loadStats;
+$("logout").onclick=logout;
+if(S.pin) openPanel();
+</script>
+</body>
+</html>
