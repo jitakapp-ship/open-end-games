@@ -49,12 +49,12 @@ function showLoading(msg, retryFn){
   show("loading");
 }
 function blocked(){ return !!(REST && REST.one_play_per_day && todayPlay); }
-function gameRunning(){ return (cg && !cg.done) || (mem && !mem.done); }
-function stopAll(){ stopMemory(); stopCatch(); }
+function gameRunning(){ return (cg && !cg.done) || (mem && !mem.done) || (pg && !pg.done); }
+function stopAll(){ stopMemory(); stopCatch(); stopPour(); }
 function goHome(){ stopAll(); refreshHome(); show("home"); }
 function refreshHome(){
   const b=blocked();
-  $("goCatch").disabled=b; $("goMemory").disabled=b;
+  $("goCatch").disabled=b; $("goMemory").disabled=b; $("goPour").disabled=b;
   $("played").style.display=b?"block":"none";
   $("ruleTxt").style.display=REST.one_play_per_day?"block":"none";
 }
@@ -75,21 +75,23 @@ $("showMine").addEventListener("click", async ()=>{
 });
 $("goCatch").addEventListener("click",()=>startGame("catch"));
 $("goMemory").addEventListener("click",()=>startGame("memory"));
+$("goPour").addEventListener("click",()=>startGame("pour"));
 
 /* ---------- بداية ونهاية اللعبة (مع السيرفر) ---------- */
 async function startGame(game){
   if(busy) return;
   if(blocked()) return openRecord(todayPlay);
   busy=true;
-  const btn=$(game==="catch"?"goCatch":"goMemory"); btn.classList.add("loading");
+  const ids={catch:"goCatch",memory:"goMemory",pour:"goPour"};
+  const btn=$(ids[game]); btn.classList.add("loading");
   try{
     const res = await api("game_start",{p_slug:SLUG,p_device:DEVICE,p_game:game,p_table:null});
     if(!res || res.error) throw new Error(res && res.error);
     todayPlay = res.play;
     if(res.already){ refreshHome(); return openRecord(res.play); }
     curPlay = res.play;
-    show(game==="catch"?"catchScreen":"memoryScreen");
-    if(game==="catch") startCatch(); else startMemory();
+    show({catch:"catchScreen",memory:"memoryScreen",pour:"pourScreen"}[game]);
+    ({catch:startCatch,memory:startMemory,pour:startPour})[game]();
   }catch(e){
     toast("صار خلل بالاتصال، حاول مرة ثانية");
   }finally{
@@ -303,6 +305,146 @@ function finishMemory(win){
     setTimeout(()=>submitResult(found,false,{ extra:"لاقيت "+found+" من "+pairs, clientPassed:false, failMsg:"خلص الوقت" }),1300);
   }
 }
+
+
+/* =========================================================
+   لعبة: املأ الكوب
+   ========================================================= */
+let pg=null;
+const POUR_CUPS=[
+  { t:.55, b:.16, s:.30, c:"#FF9F1C" },   // برتقال — سهل
+  { t:.70, b:.12, s:.40, c:"#E63946" },   // فراولة — متوسط
+  { t:.42, b:.10, s:.50, c:"#7BC950" },   // ليمون — صعب
+];
+const DRIP=.22;  // العصير يكمّل بعد الترك
+function pourNeed(){ return Math.min(3, (REST.pour && REST.pour.target) || 3); }
+function stopPour(){ if(pg){ pg.done=true; cancelAnimationFrame(pg.raf); clearTimeout(pg.next); } }
+function startPour(){
+  stopAll();
+  const wrap=$("pourWrap"), cv=$("pourCv");
+  const dpr=Math.min(window.devicePixelRatio||1,2), W=wrap.clientWidth, H=wrap.clientHeight;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+"px"; cv.style.height=H+"px";
+  const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  pg={ ctx,W,H, idx:0, level:0, rate:0, pourT:0, drip:0, spill:false, state:"ready",
+       cups: POUR_CUPS.map(c=>({ ...c, t: Math.min(.82, Math.max(.28, c.t+(Math.random()-.5)*.14)) })),
+       results:[], msg:"", done:false, raf:0, next:0, last:performance.now(), wob:0 };
+  pourHud();
+  pg.raf=requestAnimationFrame(pourLoop);
+}
+function pourHud(){
+  if(!pg) return;
+  $("pGoal").textContent="🥤 كوب "+Math.min(pg.idx+1,3)+" من 3 · لازم "+pourNeed();
+  $("pCups").textContent=[0,1,2].map(i=> i<pg.results.length ? (pg.results[i]?"✅":"❌") : "⚪").join("");
+}
+function pourDown(e){
+  if(!pg||pg.done||pg.state!=="ready") return;
+  if(e&&e.cancelable) e.preventDefault();
+  pg.state="pouring"; pg.pourT=0; buzz(10);
+}
+function pourUp(){
+  if(!pg||pg.done||pg.state!=="pouring") return;
+  pg.state="settling"; pg.drip=DRIP;
+}
+function pourLoop(t){
+  if(!pg||pg.done) return;
+  const dt=Math.min(.05,(t-pg.last)/1000); pg.last=t;
+  const cup=pg.cups[pg.idx];
+  if(pg.state==="pouring"){
+    pg.pourT+=dt; pg.rate=cup.s*(1+0.45*pg.pourT); pg.level+=pg.rate*dt;
+  }else if(pg.state==="settling"){
+    pg.level+=pg.rate*Math.max(0,pg.drip/DRIP)*dt; pg.drip-=dt;
+    if(pg.drip<=0) judgeCup();
+  }
+  if(pg.level>=1 && (pg.state==="pouring"||pg.state==="settling")){ pg.level=1; pg.spill=true; judgeCup(); }
+  pg.wob+=dt;
+  drawPour();
+  pg.raf=requestAnimationFrame(pourLoop);
+}
+function judgeCup(){
+  const cup=pg.cups[pg.idx];
+  pg.state="judged";
+  const hit=!pg.spill && Math.abs(pg.level-cup.t)<=cup.b/2;
+  pg.results.push(hit);
+  pg.msg = pg.spill ? "💦 طفح!" : hit ? "✅ ممتاز!" : (pg.level<cup.t ? "❌ ناقص" : "❌ زايد");
+  buzz(hit?[30,40,30]:120);
+  pourHud();
+  pg.next=setTimeout(()=>{
+    if(!pg||pg.done) return;
+    if(pg.idx>=pg.cups.length-1) return finishPour();
+    pg.idx++; pg.level=0; pg.rate=0; pg.spill=false; pg.msg=""; pg.state="ready"; pourHud();
+  },1150);
+}
+function finishPour(){
+  const hits=pg.results.filter(Boolean).length, need=pourNeed();
+  stopPour();
+  submitResult(hits,false,{ extra:"ضبطت "+hits+" من 3 أكواب", clientPassed:hits>=need, failMsg:"ما ضبطت الأكواب" });
+}
+function drawPour(){
+  const {ctx,W,H}=pg, cup=pg.cups[pg.idx], cx=W/2;
+  const gwT=Math.min(W*.5,210), gwB=gwT*.72, top=Math.max(96,H*.24), bot=H-24, gh=bot-top;
+  const half=y=>(gwT+(gwB-gwT)*((y-top)/gh))/2;
+  const glass=()=>{ ctx.beginPath(); ctx.moveTo(cx-gwT/2,top); ctx.lineTo(cx-gwB/2+10,bot); ctx.quadraticCurveTo(cx-gwB/2,bot,cx-gwB/2+12,bot);
+    ctx.lineTo(cx+gwB/2-12,bot); ctx.quadraticCurveTo(cx+gwB/2,bot,cx+gwB/2-10,bot); ctx.lineTo(cx+gwT/2,top); ctx.closePath(); };
+  ctx.clearRect(0,0,W,H);
+
+  // الحنفية
+  ctx.fillStyle="rgba(255,255,255,.13)"; rrect(ctx,cx-64,10,128,38,12); ctx.fill();
+  ctx.fillStyle=cup.c; ctx.beginPath(); ctx.arc(cx,29,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="rgba(255,255,255,.28)"; rrect(ctx,cx-9,46,18,18,4); ctx.fill();
+
+  // الخيط النازل
+  const ly=bot-pg.level*gh;
+  const streaming = pg.state==="pouring" || (pg.state==="settling" && pg.drip>0);
+  if(streaming){
+    const w = pg.state==="pouring" ? 9 : 9*Math.max(.25,pg.drip/DRIP);
+    ctx.fillStyle=cup.c; ctx.fillRect(cx-w/2,64,w,Math.max(0,ly-64));
+  }
+
+  // المنطقة الخضراء
+  const yA=bot-(cup.t+cup.b/2)*gh, yB=bot-(cup.t-cup.b/2)*gh;
+  ctx.save(); glass(); ctx.clip();
+  ctx.fillStyle="rgba(63,191,127,.20)"; ctx.fillRect(0,yA,W,yB-yA);
+  // العصير
+  if(pg.level>0){
+    const wave=pg.state==="pouring"?Math.sin(pg.wob*14)*2.5:Math.sin(pg.wob*6)*1.2;
+    ctx.fillStyle=cup.c;
+    ctx.beginPath(); ctx.moveTo(0,ly+wave); ctx.quadraticCurveTo(cx,ly-wave,W,ly+wave); ctx.lineTo(W,bot+2); ctx.lineTo(0,bot+2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.35)"; ctx.fillRect(0,ly-1,W,4);
+  }
+  ctx.restore();
+
+  ctx.setLineDash([7,5]); ctx.strokeStyle="#3fbf7f"; ctx.lineWidth=2;
+  [yA,yB].forEach(y=>{ const hw=half(y)+12; ctx.beginPath(); ctx.moveTo(cx-hw,y); ctx.lineTo(cx+hw,y); ctx.stroke(); });
+  ctx.setLineDash([]);
+  // سهم "هنا"
+  const my=(yA+yB)/2, ax=cx+half(my)+18;
+  ctx.fillStyle="#3fbf7f"; ctx.beginPath(); ctx.moveTo(ax,my); ctx.lineTo(ax+12,my-8); ctx.lineTo(ax+12,my+8); ctx.closePath(); ctx.fill();
+  ctx.font="900 15px Cairo, sans-serif"; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText("هنا",ax+16,my+1);
+
+  // الكوب
+  glass(); ctx.strokeStyle="rgba(255,255,255,.75)"; ctx.lineWidth=3; ctx.stroke();
+  ctx.strokeStyle="rgba(255,255,255,.16)"; ctx.lineWidth=7; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(cx-gwT/2+18,top+16); ctx.lineTo(cx-gwB/2+18,bot-16); ctx.stroke(); ctx.lineCap="butt";
+
+  // رسائل
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  if(pg.state==="ready"){
+    ctx.fillStyle="#fff"; ctx.font="900 19px Cairo, sans-serif";
+    ctx.fillText("👇 اضغط باستمرار حتى تسكب", cx, top-20);
+  }
+  if(pg.msg){
+    ctx.font="900 30px Cairo, sans-serif"; ctx.lineWidth=6; ctx.strokeStyle="rgba(0,0,0,.55)";
+    ctx.strokeText(pg.msg,cx,top+gh*.35); ctx.fillStyle="#fff"; ctx.fillText(pg.msg,cx,top+gh*.35);
+  }
+}
+(function bindPourInput(){
+  const wrap=$("pourWrap");
+  wrap.addEventListener("pointerdown",pourDown);
+  ["pointerup","pointercancel"].forEach(ev=>window.addEventListener(ev,pourUp));
+  wrap.addEventListener("pointerleave",pourUp);
+  wrap.addEventListener("contextmenu",e=>e.preventDefault());
+  window.addEventListener("blur",pourUp);
+})();
 
 /* =========================================================
    النتيجة

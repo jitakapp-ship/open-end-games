@@ -79,6 +79,7 @@
   .overlay.show{display:flex}
   .overlay span{animation:zoom .8s ease}
   @keyframes zoom{from{transform:scale(2);opacity:0}to{transform:scale(1);opacity:1}}
+  .pour-wrap{-webkit-touch-callout:none;cursor:pointer}
   .hint{color:var(--muted);text-align:center;margin:10px 0 0;font-size:.92rem}
 
   /* ---------- Memory ---------- */
@@ -176,6 +177,14 @@
         <span class="chips"><span class="chip" id="memChip1"></span><span class="chip" id="memChip2"></span></span>
       </span>
     </button>
+    <button class="game-btn" id="goPour">
+      <span class="ico">🥤</span>
+      <span>
+        <h3>املأ الكوب</h3>
+        <p>اسكب العصير ووقّف بالضبط على الخط الأخضر — 3 أكواب</p>
+        <span class="chips"><span class="chip">⏱ 20 ثانية</span><span class="chip">🎁 هدية</span></span>
+      </span>
+    </button>
   </div>
 
   <div class="played" id="played">
@@ -221,6 +230,23 @@
     <div class="timetxt" id="mTime"></div>
   </div>
   <div class="mem-grid" id="memGrid"></div>
+</section>
+
+<!-- ============ املأ الكوب ============ -->
+<section class="screen" id="pourScreen">
+  <div class="topbar">
+    <button class="backbtn" data-home>→ رجوع</button>
+    <h2>🥤 املأ الكوب</h2>
+    <span class="spacer"></span>
+  </div>
+  <div class="hud">
+    <span class="goal" id="pGoal"></span>
+    <span id="pCups" style="letter-spacing:4px"></span>
+  </div>
+  <div class="catch-wrap pour-wrap" id="pourWrap">
+    <canvas id="pourCv"></canvas>
+  </div>
+  <p class="hint">اضغط باستمرار حتى تسكب، واترك داخل المنطقة الخضراء.<br>انتبه: العصير يكمّل شوية بعد ما تترك! 😉</p>
 </section>
 
 <!-- ============ صناديق المفاجأة ============ -->

@@ -48,6 +48,11 @@
   .row{display:flex;justify-content:space-between;align-items:center}
   .foot{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24px}
   .hidden{display:none}
+  .small{font-size:.85rem;color:var(--muted);margin:0 0 10px;line-height:1.7}
+  input[type=range]{padding:0;border:0;background:none;accent-color:var(--accent);height:34px;margin:4px 0 6px}
+  .btn.ghost{background:rgba(255,255,255,.08);color:var(--text)}
+  .big{font-size:1.6rem;font-weight:900;color:var(--accent)}
+  .okmsg{color:var(--ok);font-weight:700;min-height:1.4em;margin:0 0 8px}
 </style>
 </head>
 <body>
@@ -107,6 +112,27 @@
         <tbody id="days"></tbody>
       </table>
     </div>
+
+    <div class="card" id="ownerCard">
+      <b>⚙️ إعدادات صاحب المطعم</b>
+      <div id="ownerLogin" style="margin-top:10px">
+        <p class="small">هذا القسم لصاحب المطعم فقط، ويحتاج رمز المالك (غير رمز الكاشير).</p>
+        <input id="ownerPin" type="password" inputmode="numeric" autocomplete="off" placeholder="رمز المالك">
+        <p class="err" id="ownerErr"></p>
+        <button class="btn ghost" id="ownerBtn">فتح الإعدادات</button>
+      </div>
+      <div id="ownerForm" class="hidden" style="margin-top:12px">
+        <label for="wr">نسبة الفوز</label>
+        <div class="big" id="wrVal">15%</div>
+        <input type="range" id="wr" min="0" max="100" step="1" dir="ltr">
+        <p class="small" id="wrHint"></p>
+        <label for="lim">أقصى عدد هدايا باليوم</label>
+        <input id="lim" type="number" inputmode="numeric" min="0" max="10000">
+        <p class="err" id="ownerErr2"></p>
+        <p class="okmsg" id="ownerOk"></p>
+        <button class="btn" id="saveOwner">حفظ الإعدادات</button>
+      </div>
+    </div>
   </section>
 
   <div class="foot">مقدّم من <b id="company"></b></div>
@@ -117,7 +143,7 @@
 <script>
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
-const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق"};
+const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق",pour:"املأ الكوب"};
 let S={slug:(params.get("r")||"").toLowerCase(), pin:""};
 let current=null;
 
@@ -198,6 +224,46 @@ async function loadStats(){
     $("days").innerHTML=r.days.map(d=>`<tr><td>${dayName(d.date)}</td><td>${d.plays}</td><td>${d.passed}</td><td>${d.won}</td><td>${d.redeemed}</td></tr>`).join("");
   }catch(e){}
 }
+
+
+/* ---------- إعدادات صاحب المطعم ---------- */
+let OWNER_PIN="";
+function wrHint(){
+  const v=+$("wr").value; $("wrVal").textContent=v+"%";
+  $("wrHint").textContent = v===0 ? "ماكو أحد راح يربح هدية."
+    : "من كل 100 زبون ينجح باللعبة، تقريباً "+v+" يربحون هدية. واللي يخسر باللعبة ما يربح أصلاً، فالعدد الحقيقي يطلع أقل.";
+  $("ownerOk").textContent="";
+}
+async function ownerOpen(){
+  const pin=$("ownerPin").value.trim(); if(!pin) return;
+  $("ownerBtn").disabled=true; $("ownerErr").textContent="";
+  try{
+    const r=await api("game_owner_get",{p_slug:S.slug,p_pin:pin});
+    if(!r||r.error){ $("ownerErr").textContent="رمز المالك غلط"; return; }
+    OWNER_PIN=pin; $("ownerPin").value="";
+    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; wrHint();
+    $("ownerLogin").classList.add("hidden"); $("ownerForm").classList.remove("hidden");
+  }catch(e){ $("ownerErr").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
+  finally{ $("ownerBtn").disabled=false; }
+}
+async function ownerSave(){
+  const pct=+$("wr").value, lim=parseInt($("lim").value,10);
+  $("ownerErr2").textContent=""; $("ownerOk").textContent="";
+  if(isNaN(lim)||lim<0){ $("ownerErr2").textContent="اكتب رقم صحيح لعدد الهدايا"; return; }
+  $("saveOwner").disabled=true;
+  try{
+    const r=await api("game_owner_set",{p_slug:S.slug,p_pin:OWNER_PIN,p_win_percent:pct,p_daily_limit:lim});
+    if(!r||r.error){ $("ownerErr2").textContent = r&&r.error==="bad_pin" ? "انتهت الجلسة، افتح الإعدادات من جديد" : "القيم غير صحيحة"; return; }
+    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; wrHint();
+    $("ownerOk").textContent="✅ انحفظت — تشتغل من هسه";
+    loadStats();
+  }catch(e){ $("ownerErr2").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
+  finally{ $("saveOwner").disabled=false; }
+}
+$("ownerBtn").onclick=ownerOpen;
+$("ownerPin").addEventListener("keydown",e=>{ if(e.key==="Enter") ownerOpen(); });
+$("wr").addEventListener("input",wrHint);
+$("saveOwner").onclick=ownerSave;
 
 $("loginBtn").onclick=login;
 $("pin").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
