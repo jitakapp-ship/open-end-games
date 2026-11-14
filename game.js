@@ -364,12 +364,16 @@ function finishMemory(win){
    ========================================================= */
 let pg=null;
 const POUR_CUPS=[
-  { t:.55, b:.16, s:.30, c:"#FF9F1C" },   // برتقال — سهل
-  { t:.70, b:.12, s:.40, c:"#E63946" },   // فراولة — متوسط
-  { t:.42, b:.10, s:.50, c:"#7BC950" },   // ليمون — صعب
+  { t:.55, b:.17, s:.30, c:"#FF9F1C" },   // برتقال — سهل
+  { t:.68, b:.15, s:.36, c:"#E63946" },   // فراولة
+  { t:.45, b:.13, s:.42, c:"#7BC950" },   // ليمون
+  { t:.72, b:.12, s:.48, c:"#8E44AD" },   // عنب
+  { t:.38, b:.10, s:.54, c:"#F4D35E" },   // أناناس
+  { t:.62, b:.09, s:.60, c:"#4A2C2A" },   // كولا — أصعب وحدة
 ];
 const DRIP=.22;  // العصير يكمّل بعد الترك
-function pourNeed(){ return Math.min(3, (REST.pour && REST.pour.target) || 3); }
+function pourNeed(){ return Math.min(POUR_CUPS.length, (REST.pour && REST.pour.target) || 5); }
+function pourSecs(){ return (REST.pour && REST.pour.seconds) || 40; }
 function stopPour(){ if(pg){ pg.done=true; cancelAnimationFrame(pg.raf); clearTimeout(pg.next); } }
 function startPour(){
   stopAll();
@@ -379,14 +383,15 @@ function startPour(){
   const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
   pg={ ctx,W,H, idx:0, level:0, rate:0, pourT:0, drip:0, spill:false, state:"ready",
        cups: POUR_CUPS.map(c=>({ ...c, t: Math.min(.82, Math.max(.28, c.t+(Math.random()-.5)*.14)) })),
-       results:[], msg:"", done:false, raf:0, next:0, last:performance.now(), wob:0 };
+       results:[], msg:"", done:false, raf:0, next:0, last:performance.now(), wob:0, started:performance.now() };
   pourHud();
   pg.raf=requestAnimationFrame(pourLoop);
 }
 function pourHud(){
   if(!pg) return;
-  $("pGoal").textContent="🥤 كوب "+Math.min(pg.idx+1,3)+" من 3 · لازم "+pourNeed();
-  $("pCups").textContent=[0,1,2].map(i=> i<pg.results.length ? (pg.results[i]?"✅":"❌") : "⚪").join("");
+  const N=pg.cups.length;
+  $("pGoal").textContent="🥤 كوب "+Math.min(pg.idx+1,N)+" من "+N+" · لازم "+pourNeed();
+  $("pCups").textContent=pg.cups.map((c,i)=> i<pg.results.length ? (pg.results[i]?"✅":"❌") : "⚪").join("");
 }
 function pourDown(e){
   if(!pg||pg.done||pg.state!=="ready") return;
@@ -401,6 +406,14 @@ function pourLoop(t){
   if(!pg||pg.done) return;
   const dt=Math.min(.05,(t-pg.last)/1000); pg.last=t;
   const cup=pg.cups[pg.idx];
+  const left=pourSecs()-(t-pg.started)/1000;
+  $("pTime").textContent="⏱ "+Math.max(0,Math.ceil(left));
+  $("pFill").style.width=Math.max(0,left/pourSecs()*100)+"%";
+  $("pBar").classList.toggle("low",left<=8);
+  if(left<=0){
+    while(pg.results.length<pg.cups.length) pg.results.push(false);
+    pourHud(); return finishPour(true);
+  }
   if(pg.state==="pouring"){
     pg.pourT+=dt; pg.rate=cup.s*(1+0.45*pg.pourT); pg.level+=pg.rate*dt;
   }else if(pg.state==="settling"){
@@ -426,10 +439,11 @@ function judgeCup(){
     pg.idx++; pg.level=0; pg.rate=0; pg.spill=false; pg.msg=""; pg.state="ready"; pourHud();
   },1150);
 }
-function finishPour(){
-  const hits=pg.results.filter(Boolean).length, need=pourNeed();
+function finishPour(timeUp){
+  const hits=pg.results.filter(Boolean).length, need=pourNeed(), N=pg.cups.length;
   stopPour();
-  submitResult(hits,false,{ extra:"ضبطت "+hits+" من 3 أكواب", clientPassed:hits>=need, failMsg:"ما ضبطت الأكواب" });
+  submitResult(hits,false,{ extra:"ضبطت "+hits+" من "+N+" أكواب", clientPassed:hits>=need,
+                            failMsg: timeUp ? "خلص الوقت" : "ما ضبطت الأكواب" });
 }
 function drawPour(){
   const {ctx,W,H}=pg, cup=pg.cups[pg.idx], cx=W/2;
@@ -747,6 +761,7 @@ function applyRestaurant(){
   $("catchChip1").textContent="⏱ "+REST.catch.seconds+" ثانية · 🎯 "+REST.catch.target;
   $("catchChip2").textContent="🎁 هدية";
   $("memChip1").textContent="⏱ "+REST.memory.seconds+" ثانية";
+  $("pourChip1").textContent="⏱ "+pourSecs()+" ثانية · 🎯 "+pourNeed()+" من 6";
   const games=Array.isArray(REST.games)&&REST.games.length?REST.games:["catch","memory","pour"];
   [["goDelivery","delivery"],["goCatch","catch"],["goMemory","memory"],["goPour","pour"]].forEach(([id,gm])=>{ $(id).style.display=games.includes(gm)?"":"none"; });
   const DC=delCfg(); $("delChip1").textContent="⏱ "+DC.seconds+" ثانية · 📦 "+DC.target+" طلب";

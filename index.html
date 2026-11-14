@@ -197,8 +197,8 @@
       <span class="ico">🥤</span>
       <span>
         <h3>املأ الكوب</h3>
-        <p>اسكب العصير ووقّف بالضبط على الخط الأخضر — 3 أكواب</p>
-        <span class="chips"><span class="chip">⏱ 20 ثانية</span><span class="chip">🎁 هدية</span></span>
+        <p>اسكب العصير ووقّف بالضبط على الخط الأخضر — 6 أكواب، كل واحد أصعب</p>
+        <span class="chips"><span class="chip" id="pourChip1">⏱ 40 ثانية</span><span class="chip">🎁 هدية</span></span>
       </span>
     </button>
   </div>
@@ -278,8 +278,10 @@
   </div>
   <div class="hud">
     <span class="goal" id="pGoal"></span>
-    <span id="pCups" style="letter-spacing:4px"></span>
+    <span id="pTime"></span>
   </div>
+  <div class="timebar" id="pBar"><i id="pFill"></i></div>
+  <div id="pCups" style="text-align:center;letter-spacing:3px;font-size:1.1rem;margin:8px 0 0"></div>
   <div class="catch-wrap pour-wrap" id="pourWrap">
     <canvas id="pourCv"></canvas>
   </div>
@@ -325,6 +327,6 @@
 
 <script src="config.js?v=5"></script>
 <script src="api.js?v=5"></script>
-<script src="game.js?v=5"></script>
+<script src="game.js?v=6"></script>
 </body>
 </html>
