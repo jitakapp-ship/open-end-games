@@ -142,12 +142,12 @@
   <div class="foot">مقدّم من <b id="company"></b></div>
 </div>
 
-<script src="config.js"></script>
-<script src="api.js"></script>
+<script src="config.js?v=5"></script>
+<script src="api.js?v=5"></script>
 <script>
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
-const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق",pour:"املأ الكوب"};
+const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق",pour:"املأ الكوب",delivery:"وصّل الطلب (جيتك)"};
 let S={slug:(params.get("r")||"").toLowerCase(), pin:""};
 let current=null;
 

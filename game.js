@@ -92,12 +92,12 @@ function waitText(){
   const parts=[]; if(h>0) parts.push(h+" ساعة"); if(m>0) parts.push(m+" دقيقة");
   return "تكدر تلعب مرة ثانية بعد "+parts.join(" و ");
 }
-function gameRunning(){ return (cg && !cg.done) || (mem && !mem.done) || (pg && !pg.done); }
-function stopAll(){ stopMemory(); stopCatch(); stopPour(); }
+function gameRunning(){ return (cg && !cg.done) || (mem && !mem.done) || (pg && !pg.done) || (dg && !dg.done); }
+function stopAll(){ stopMemory(); stopCatch(); stopPour(); stopDelivery(); }
 function goHome(){ stopAll(); refreshHome(); show("home"); }
 function refreshHome(){
   const b=blocked();
-  $("goCatch").disabled=b; $("goMemory").disabled=b; $("goPour").disabled=b;
+  $("goCatch").disabled=b; $("goMemory").disabled=b; $("goPour").disabled=b; $("goDelivery").disabled=b;
   $("played").style.display=b?"block":"none";
   if(b){
     $("playedMsg").textContent = (todayPlay ? "✅ لعبت خلال آخر 24 ساعة. " : "⏳ هذا التلفون لعب خلال آخر 24 ساعة. ") + waitText();
@@ -123,13 +123,14 @@ $("showMine").addEventListener("click", async ()=>{
 $("goCatch").addEventListener("click",()=>startGame("catch"));
 $("goMemory").addEventListener("click",()=>startGame("memory"));
 $("goPour").addEventListener("click",()=>startGame("pour"));
+$("goDelivery").addEventListener("click",()=>startGame("delivery"));
 
 /* ---------- بداية ونهاية اللعبة (مع السيرفر) ---------- */
 async function startGame(game){
   if(busy) return;
   if(blocked()) return openRecord(todayPlay);
   busy=true;
-  const ids={catch:"goCatch",memory:"goMemory",pour:"goPour"};
+  const ids={catch:"goCatch",memory:"goMemory",pour:"goPour",delivery:"goDelivery"};
   const btn=$(ids[game]); btn.classList.add("loading");
   try{
     const res = await api("game_start",{p_slug:SLUG,p_device:DEVICE,p_game:game,p_table:null,p_fp:FP});
@@ -141,8 +142,8 @@ async function startGame(game){
     todayPlay = res.play;
     if(res.already){ refreshHome(); return openRecord(res.play); }
     curPlay = res.play;
-    show({catch:"catchScreen",memory:"memoryScreen",pour:"pourScreen"}[game]);
-    ({catch:startCatch,memory:startMemory,pour:startPour})[game]();
+    show({catch:"catchScreen",memory:"memoryScreen",pour:"pourScreen",delivery:"deliveryScreen"}[game]);
+    ({catch:startCatch,memory:startMemory,pour:startPour,delivery:startDelivery})[game]();
   }catch(e){
     toast("صار خلل بالاتصال، حاول مرة ثانية");
   }finally{
@@ -497,6 +498,193 @@ function drawPour(){
   window.addEventListener("blur",pourUp);
 })();
 
+
+/* =========================================================
+   لعبة: وصّل الطلب — بالتعاون مع تطبيق جيتك
+   ========================================================= */
+let dg=null;
+const JITAK_IMG=new Image(); JITAK_IMG.src="jitak.png";
+const CAR_COLORS=["#e63946","#f4a261","#2a9d8f","#e9c46a","#b8c0cc","#f1faee","#457b9d","#9b5de5"];
+function delCfg(){ const d=(REST&&REST.delivery)||{}; return { seconds:d.seconds||60, target:d.target||20, signs:Array.isArray(d.signs)?d.signs:[] }; }
+function stopDelivery(){ if(dg){ dg.done=true; cancelAnimationFrame(dg.raf); clearTimeout(dg.cd); } }
+function startDelivery(){
+  stopAll();
+  const D=delCfg(), wrap=$("delWrap"), cv=$("delCv");
+  const dpr=Math.min(window.devicePixelRatio||1,2), W=wrap.clientWidth, H=wrap.clientHeight;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+"px"; cv.style.height=H+"px";
+  const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const roadW=Math.min(W*0.76,330), roadL=(W-roadW)/2, laneW=roadW/3;
+  dg={ ctx,W,H,D,roadL,roadW,laneW, lane:1, x:roadL+laneW*1.5, py:H-78,
+       score:0, lives:3, inv:0, shake:0, ents:[], pops:[], scroll:0, rowAcc:0,
+       signAcc:0, signIdx:0, started:0, last:0, raf:0, cd:0, done:false, running:false };
+  dHud(D.seconds); drawDelivery();
+  dCountdown(["3","2","1","انطلق!"],0);
+}
+function dCountdown(seq,i){
+  const ov=$("dOverlay");
+  if(!dg||dg.done){ ov.classList.remove("show"); return; }
+  if(i>=seq.length){ ov.classList.remove("show"); dg.running=true; dg.started=dg.last=performance.now(); dg.raf=requestAnimationFrame(delLoop); return; }
+  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show");
+  dg.cd=setTimeout(()=>dCountdown(seq,i+1), i===seq.length-1?500:750);
+}
+function dHud(left){
+  const D=dg.D;
+  const g=$("dGoal"); g.textContent="📦 "+dg.score+" من "+D.target; g.classList.toggle("done",dg.score>=D.target);
+  $("dLives").textContent="❤️".repeat(Math.max(0,dg.lives))+"🤍".repeat(Math.max(0,3-dg.lives));
+  $("dTime").textContent="⏱ "+Math.max(0,Math.ceil(left));
+  $("dFill").style.width=Math.max(0,left/D.seconds*100)+"%";
+  $("dBar").classList.toggle("low",left<=10);
+  const km=Math.max(0,4*left/D.seconds);
+  $("dDist").textContent="📍 "+(REST?REST.name:"")+" — باقي "+km.toFixed(1)+" كم";
+}
+function laneX(l){ return dg.roadL+dg.laneW*(l+.5); }
+function delSpeed(p){ return 260+250*p; }
+function delSpawnRow(p){
+  // نضمن دايماً أكو مسار مفتوح يوصله اللاعب من المسار المفتوح بالصف اللي قبله
+  const prev=dg.lastFree||[0,1,2];
+  let n=Math.random()<(0.2+0.3*p)?2:1, lanes;
+  if(n===2){
+    const ok=[0,1,2].filter(f=>prev.some(q=>Math.abs(q-f)<=1));
+    const f=ok[Math.floor(Math.random()*ok.length)];
+    lanes=[...shuffle([0,1,2].filter(l=>l!==f)), f];
+  }else lanes=shuffle([0,1,2]);
+  dg.lastFree=lanes.slice(n);
+  lanes.slice(0,n).forEach(l=>{
+    const r=Math.random(), lw=dg.laneW;
+    if(r<0.6) dg.ents.push({t:"car",l,y:-110,w:Math.min(46,lw*.66),h:80,c:CAR_COLORS[Math.floor(Math.random()*CAR_COLORS.length)]});
+    else if(r<0.82) dg.ents.push({t:"hole",l,y:-60,w:lw*.56,h:30});
+    else dg.ents.push({t:"bar",l,y:-50,w:lw*.82,h:20});
+  });
+  const free=lanes.slice(n);
+  if(Math.random()<0.34){ dg.ents.push({t:"bag",l:free[Math.floor(Math.random()*free.length)],y:-40,w:34,h:34}); }
+}
+function delSign(){
+  const D=dg.D, names=D.signs;
+  const left=D.seconds-(performance.now()-dg.started)/1000;
+  const txt = names.length ? names[dg.signIdx++ % names.length]
+                           : "📍 "+(REST?REST.name:"")+" ↑ "+Math.max(0.1,4*left/D.seconds-0.3).toFixed(1)+" كم";
+  dg.ents.push({t:"sign",l:1,y:-70,w:dg.roadW*.82,h:30,txt});
+}
+function delLoop(t){
+  if(!dg||dg.done) return;
+  const dt=Math.min(.05,(t-dg.last)/1000); dg.last=t;
+  const D=dg.D, el=(t-dg.started)/1000, left=D.seconds-el, p=Math.min(1,el/D.seconds);
+  const v=delSpeed(p), move=v*dt;
+  dg.scroll+=move; dg.rowAcc+=move; dg.signAcc+=dt;
+  if(dg.rowAcc>=320-115*p){ dg.rowAcc=0; delSpawnRow(p); }
+  if(dg.signAcc>=8.5){ dg.signAcc=0; delSign(); }
+  dg.x+=(laneX(dg.lane)-dg.x)*Math.min(1,dt*20);
+  if(dg.inv>0) dg.inv-=dt;
+  if(dg.shake>0) dg.shake-=dt;
+  const pw=30, ph=60, px=dg.x, py=dg.py;
+  dg.ents=dg.ents.filter(e=>{
+    e.y+=move;
+    if(e.t!=="sign" && !e.hit){
+      const ex=laneX(e.l);
+      const hitX=Math.abs(ex-px) < (e.w+pw)/2-4, hitY=Math.abs(e.y-py) < (e.h+ph)/2-6;
+      if(hitX&&hitY){
+        if(e.t==="bag"){ dg.score++; buzz(10); dg.pops.push({x:ex,y:py-46,t:0,s:"+1 📦",c:"#9ff0c2"}); return false; }
+        if(dg.inv<=0){
+          e.hit=true; dg.lives--; dg.inv=1.3; dg.shake=.4; buzz([80,40,80]);
+          dg.pops.push({x:px,y:py-50,t:0,s:e.t==="hole"?"حفرة! 💥":"اصطدام! 💥",c:"#ff7a6e"});
+          if(dg.lives<=0){ dHud(left); drawDelivery(); return finishDelivery(false), false; }
+        }
+      }
+    }
+    return e.y<dg.H+120;
+  });
+  if(!dg||dg.done) return;
+  dg.pops=dg.pops.filter(q=>(q.t+=dt)<.8);
+  dHud(left); drawDelivery();
+  if(left<=0) return finishDelivery(true);
+  dg.raf=requestAnimationFrame(delLoop);
+}
+function finishDelivery(completed){
+  if(!dg||dg.done) return;
+  const s=dg.score, D=dg.D; stopDelivery();
+  submitResult(s, completed, {
+    extra: completed ? "وصّلت "+s+" طلب لقلب المدينة 🛵" : "وصّلت "+s+" طلب قبل ما تتصادم 3 مرات",
+    clientPassed: completed && s>=D.target,
+    failMsg: completed ? "ما وصّلت طلبات كافية" : "تصادمت 3 مرات"
+  });
+}
+function drawScooter(ctx,x,y,blink){
+  if(blink) ctx.globalAlpha=.35;
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(x+3,y+6,20,36,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#111"; rrect(ctx,x-5,y-36,10,16,4); ctx.fill(); rrect(ctx,x-5,y+22,10,16,4); ctx.fill();
+  const g=ctx.createLinearGradient(x-12,y-30,x+12,y+30); g.addColorStop(0,"#3b36ff"); g.addColorStop(1,"#8a2be2");
+  ctx.fillStyle=g; rrect(ctx,x-11,y-28,22,50,9); ctx.fill();
+  ctx.strokeStyle="#d9d9e8"; ctx.lineWidth=3; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(x-15,y-20); ctx.lineTo(x+15,y-20); ctx.stroke(); ctx.lineCap="butt";
+  ctx.fillStyle="#fff"; rrect(ctx,x-16,y+2,32,28,5); ctx.fill();
+  ctx.strokeStyle="#5a2be0"; ctx.lineWidth=2.5; rrect(ctx,x-16,y+2,32,28,5); ctx.stroke();
+  if(JITAK_IMG.complete&&JITAK_IMG.naturalWidth){ ctx.drawImage(JITAK_IMG,x-11,y+5,22,22); }
+  ctx.fillStyle="#5a2be0"; ctx.beginPath(); ctx.arc(x,y-8,9,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="rgba(255,255,255,.55)"; ctx.beginPath(); ctx.arc(x,y-11,5,Math.PI,0); ctx.fill();
+  ctx.globalAlpha=1;
+}
+function drawDelivery(){
+  const {ctx,W,H,roadL,roadW,laneW}=dg;
+  ctx.save(); ctx.clearRect(0,0,W,H);
+  if(dg.shake>0) ctx.translate((Math.random()-.5)*10,(Math.random()-.5)*6);
+  // الأرصفة والبنايات
+  ctx.fillStyle="#3d3a45"; ctx.fillRect(-10,-10,W+20,H+20);
+  const pal=["#6d597a","#b56576","#355070","#e56b6f","#4a4e69","#9a8c98"], B=96, off=dg.scroll%B;
+  for(let k=-1;k<=Math.ceil(H/B)+1;k++){
+    const y=k*B+off-B, idx=Math.floor(dg.scroll/B)-k;
+    const cl=pal[((idx%6)+6)%6], cr=pal[(((idx+3)%6)+6)%6];
+    if(roadL>14){
+      ctx.fillStyle=cl; ctx.fillRect(4,y+6,roadL-12,B-14);
+      ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(8,y+12,roadL-20,8);
+      ctx.fillStyle=cr; ctx.fillRect(roadL+roadW+8,y+6,W-(roadL+roadW)-12,B-14);
+      ctx.fillStyle="rgba(255,255,255,.18)"; ctx.fillRect(roadL+roadW+12,y+12,W-(roadL+roadW)-20,8);
+    }
+  }
+  // الشارع
+  ctx.fillStyle="#2b2b31"; ctx.fillRect(roadL,-10,roadW,H+20);
+  ctx.fillStyle="#e9e9ef"; ctx.fillRect(roadL,-10,4,H+20); ctx.fillRect(roadL+roadW-4,-10,4,H+20);
+  ctx.fillStyle="rgba(255,255,255,.65)";
+  const dOff=dg.scroll%64;
+  for(let i=1;i<3;i++){ const x=roadL+laneW*i-2; for(let y=-64+dOff;y<H;y+=64) ctx.fillRect(x,y,4,34); }
+  // العناصر
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  dg.ents.forEach(e=>{
+    const x=laneX(e.l), y=e.y;
+    if(e.t==="car"){
+      ctx.fillStyle="rgba(0,0,0,.35)"; rrect(ctx,x-e.w/2+3,y-e.h/2+5,e.w,e.h,10); ctx.fill();
+      ctx.fillStyle=e.c; rrect(ctx,x-e.w/2,y-e.h/2,e.w,e.h,10); ctx.fill();
+      ctx.fillStyle="rgba(20,30,45,.85)"; rrect(ctx,x-e.w/2+5,y-e.h/2+14,e.w-10,16,4); ctx.fill(); rrect(ctx,x-e.w/2+6,y+e.h/2-22,e.w-12,11,3); ctx.fill();
+      ctx.fillStyle="#ff3b3b"; ctx.fillRect(x-e.w/2+3,y+e.h/2-4,8,3); ctx.fillRect(x+e.w/2-11,y+e.h/2-4,8,3);
+    }else if(e.t==="hole"){
+      ctx.fillStyle="#121214"; ctx.beginPath(); ctx.ellipse(x,y,e.w/2,e.h/2,0,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle="#55525c"; ctx.lineWidth=3; ctx.stroke();
+    }else if(e.t==="bar"){
+      ctx.save(); rrect(ctx,x-e.w/2,y-e.h/2,e.w,e.h,4); ctx.clip();
+      for(let i=-2;i<12;i++){ ctx.fillStyle=i%2?"#fff":"#e63946"; ctx.beginPath(); const sx=x-e.w/2+i*12; ctx.moveTo(sx,y+e.h/2); ctx.lineTo(sx+12,y+e.h/2); ctx.lineTo(sx+24,y-e.h/2); ctx.lineTo(sx+12,y-e.h/2); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    }else if(e.t==="bag"){
+      ctx.fillStyle="rgba(255,214,102,.28)"; ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.fill();
+      ctx.font="28px system-ui, 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; ctx.fillText("🥡",x,y+1);
+    }else if(e.t==="sign"){
+      ctx.fillStyle="#5d5d66"; ctx.fillRect(roadL+6,y-e.h/2,4,e.h+18); ctx.fillRect(roadL+roadW-10,y-e.h/2,4,e.h+18);
+      ctx.fillStyle="#1b7f3a"; rrect(ctx,dg.W/2-e.w/2,y-e.h/2,e.w,e.h,6); ctx.fill();
+      ctx.strokeStyle="#fff"; ctx.lineWidth=2; rrect(ctx,dg.W/2-e.w/2+3,y-e.h/2+3,e.w-6,e.h-6,4); ctx.stroke();
+      ctx.fillStyle="#fff"; ctx.font="900 14px Cairo, sans-serif"; ctx.fillText(e.txt,dg.W/2,y+1,e.w-16);
+    }
+  });
+  drawScooter(ctx,dg.x,dg.py, dg.inv>0 && Math.floor(dg.inv*10)%2===0);
+  ctx.font="900 20px Cairo, sans-serif";
+  dg.pops.forEach(q=>{ ctx.globalAlpha=1-q.t/.8; ctx.fillStyle=q.c; ctx.fillText(q.s,q.x,q.y-q.t*50); });
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+(function bindDeliveryInput(){
+  const wrap=$("delWrap");
+  const go=d=>{ if(!dg||dg.done||!dg.running) return; dg.lane=Math.max(0,Math.min(2,dg.lane+d)); buzz(6); };
+  wrap.addEventListener("pointerdown",e=>{ const r=wrap.getBoundingClientRect(); go(e.clientX-r.left<r.width/2?-1:1); });
+  wrap.addEventListener("contextmenu",e=>e.preventDefault());
+  window.addEventListener("keydown",e=>{ if(!dg||dg.done) return; if(e.key==="ArrowLeft") go(-1); else if(e.key==="ArrowRight") go(1); });
+})();
+
 /* =========================================================
    النتيجة
    ========================================================= */
@@ -559,6 +747,9 @@ function applyRestaurant(){
   $("catchChip1").textContent="⏱ "+REST.catch.seconds+" ثانية · 🎯 "+REST.catch.target;
   $("catchChip2").textContent="🎁 هدية";
   $("memChip1").textContent="⏱ "+REST.memory.seconds+" ثانية";
+  const games=Array.isArray(REST.games)&&REST.games.length?REST.games:["catch","memory","pour"];
+  [["goDelivery","delivery"],["goCatch","catch"],["goMemory","memory"],["goPour","pour"]].forEach(([id,gm])=>{ $(id).style.display=games.includes(gm)?"":"none"; });
+  const DC=delCfg(); $("delChip1").textContent="⏱ "+DC.seconds+" ثانية · 📦 "+DC.target+" طلب";
   $("memChip2").textContent="🎁 هدية";
   document.title="العب واربح — "+REST.name;
 }
