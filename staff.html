@@ -48,6 +48,26 @@
   .row{display:flex;justify-content:space-between;align-items:center}
   .foot{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24px}
   .hidden{display:none}
+  .meal{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:#16120f}
+  .meal.off{opacity:.55}
+  .meal .top{display:flex;gap:10px;align-items:center}
+  .meal .top input[type=text]{margin:0;flex:1;font-weight:700}
+  .sw{display:flex;align-items:center;gap:6px;color:var(--text);font-size:.9rem;white-space:nowrap;margin:0;cursor:pointer}
+  .sw input{width:22px;height:22px;margin:0;accent-color:var(--ok)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .two label{margin:0 0 4px}
+  .two input{margin:0}
+  .days{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+  .day{flex:1;min-width:42px;padding:7px 0;border-radius:9px;border:1px solid var(--line);background:none;color:var(--muted);font-family:inherit;font-size:.8rem;cursor:pointer}
+  .day.on{background:var(--accent);color:#1a1410;border-color:var(--accent);font-weight:700}
+  .mrow{display:flex;gap:10px;align-items:center}
+  .mrow .btn{width:auto;padding:10px 18px;font-size:.95rem}
+  .mmsg{font-size:.85rem;font-weight:700}
+  .small{font-size:.85rem;color:var(--muted);margin:0 0 10px;line-height:1.7}
+  input[type=range]{padding:0;border:0;background:none;accent-color:var(--accent);height:34px;margin:4px 0 6px}
+  .btn.ghost{background:rgba(255,255,255,.08);color:var(--text)}
+  .big{font-size:1.6rem;font-weight:900;color:var(--accent)}
+  .okmsg{color:var(--ok);font-weight:700;min-height:1.4em;margin:0 0 8px}
 </style>
 </head>
 <body>
@@ -102,22 +122,63 @@
         <div class="stat"><b id="sRedeemed">0</b><span>استلموا</span></div>
         <div class="stat"><b id="sLeft">0</b><span>هدايا باقية</span></div>
       </div>
+      <div id="prizesBox" class="hidden">
+        <b style="display:block;margin:14px 0 4px">🍽️ وجبات اليوم</b>
+        <table>
+          <thead><tr><th>الوجبة</th><th>ربحوها</th><th>استلموها</th><th>الحد</th></tr></thead>
+          <tbody id="prizes"></tbody>
+        </table>
+      </div>
       <table>
         <thead><tr><th>اليوم</th><th>لعبوا</th><th>نجحوا</th><th>ربحوا</th><th>استلموا</th></tr></thead>
         <tbody id="days"></tbody>
       </table>
+    </div>
+
+    <div class="card" id="ownerCard">
+      <b>⚙️ إعدادات صاحب المطعم</b>
+      <div id="ownerLogin" style="margin-top:10px">
+        <p class="small">هذا القسم لصاحب المطعم فقط، ويحتاج رمز المالك (غير رمز الكاشير).</p>
+        <input id="ownerPin" type="password" inputmode="numeric" autocomplete="off" placeholder="رمز المالك">
+        <p class="err" id="ownerErr"></p>
+        <button class="btn ghost" id="ownerBtn">فتح الإعدادات</button>
+      </div>
+      <div id="ownerForm" class="hidden" style="margin-top:12px">
+        <div id="wrBlock">
+        <label for="wr">نسبة الفوز</label>
+        <div class="big" id="wrVal">15%</div>
+        <input type="range" id="wr" min="0" max="100" step="1" dir="ltr">
+        <p class="small" id="wrHint"></p>
+        </div>
+        <label for="lim">أقصى عدد هدايا باليوم</label>
+        <input id="lim" type="number" inputmode="numeric" min="0" max="10000">
+        <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text);margin:2px 0 12px;cursor:pointer">
+          <input type="checkbox" id="strict" style="width:22px;height:22px;margin:3px 0 0;flex:none;accent-color:var(--accent)">
+          <span><b>قفل صارم</b><br><span class="small" style="display:block;margin:2px 0 0">يمنع نفس التلفون يلعب مرة ثانية خلال 24 ساعة حتى لو بدّل المتصفح أو فتح خفي. نادراً ممكن يمنع زبون ثاني عنده نفس نوع التلفون ومتصل بنفس الواي فاي.</span></span>
+        </label>
+        <p class="err" id="ownerErr2"></p>
+        <p class="okmsg" id="ownerOk"></p>
+        <button class="btn" id="saveOwner">حفظ الإعدادات</button>
+
+        <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
+          <b>🍽️ الوجبات</b>
+          <p class="small" style="margin-top:6px">كل وجبة إلها نسبة فوز: <b>1%</b> يعني من كل 100 زبون ينجح باللعبة، تقريباً واحد يربحها. الأيام: إذا ما اخترت ولا يوم، الوجبة تطلع كل يوم. الحد اليومي: فارغ = بدون حد خاص.</p>
+          <div id="meals"></div>
+          <button class="btn ghost" id="addMeal">+ إضافة وجبة</button>
+        </div>
+      </div>
     </div>
   </section>
 
   <div class="foot">مقدّم من <b id="company"></b></div>
 </div>
 
-<script src="config.js"></script>
-<script src="api.js"></script>
+<script src="config.js?v=7"></script>
+<script src="api.js?v=7"></script>
 <script>
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
-const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق"};
+const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق",pour:"املأ الكوب",delivery:"وصّل الطلب (جيتك)"};
 let S={slug:(params.get("r")||"").toLowerCase(), pin:""};
 let current=null;
 
@@ -167,7 +228,7 @@ function render(p, expired){
   else if(expired){ cls="expired"; title="⚠️ الكوبون منتهي (مو من اليوم)"; }
   box.className="res show "+cls;
   $("resTitle").textContent=title;
-  $("resPrize").textContent=p.prize||"";
+  $("resPrize").textContent="🎁 "+(p.prize||"هدية");
   $("resCode").textContent=p.code;
   $("resGame").textContent=GAME_NAMES[p.game]||p.game;
   $("resTime").textContent=fmt(p.finished_at);
@@ -195,9 +256,102 @@ async function loadStats(){
     const t=r.days[0]||{plays:0,won:0,redeemed:0};
     $("sPlays").textContent=t.plays; $("sWon").textContent=t.won; $("sRedeemed").textContent=t.redeemed;
     $("sLeft").textContent=Math.max(0,r.daily_prize_limit-t.won);
+    const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    const pr=Array.isArray(r.prizes)?r.prizes:[];
+    $("prizesBox").classList.toggle("hidden",!pr.length);
+    $("prizes").innerHTML=pr.map(x=>`<tr style="${x.today?"":"opacity:.45"}"><td>${esc(x.name)}${x.today?"":" <small>(مو اليوم)</small>"}</td><td>${x.won}</td><td>${x.redeemed}</td><td>${x.daily_limit==null?"—":x.daily_limit}</td></tr>`).join("");
     $("days").innerHTML=r.days.map(d=>`<tr><td>${dayName(d.date)}</td><td>${d.plays}</td><td>${d.passed}</td><td>${d.won}</td><td>${d.redeemed}</td></tr>`).join("");
   }catch(e){}
 }
+
+
+/* ---------- إعدادات صاحب المطعم ---------- */
+let OWNER_PIN="";
+function wrHint(){
+  const v=+$("wr").value; $("wrVal").textContent=v+"%";
+  $("wrHint").textContent = v===0 ? "ماكو أحد راح يربح هدية."
+    : "من كل 100 زبون ينجح باللعبة، تقريباً "+v+" يربحون هدية. واللي يخسر باللعبة ما يربح أصلاً، فالعدد الحقيقي يطلع أقل.";
+  $("ownerOk").textContent="";
+}
+async function ownerOpen(){
+  const pin=$("ownerPin").value.trim(); if(!pin) return;
+  $("ownerBtn").disabled=true; $("ownerErr").textContent="";
+  try{
+    const r=await api("game_owner_get",{p_slug:S.slug,p_pin:pin});
+    if(!r||r.error){ $("ownerErr").textContent="رمز المالك غلط"; return; }
+    OWNER_PIN=pin; $("ownerPin").value="";
+    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; $("strict").checked=r.strict_lock!==false; wrHint();
+    renderMeals(r.prizes);
+    $("ownerLogin").classList.add("hidden"); $("ownerForm").classList.remove("hidden");
+  }catch(e){ $("ownerErr").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
+  finally{ $("ownerBtn").disabled=false; }
+}
+async function ownerSave(){
+  const pct=+$("wr").value, lim=parseInt($("lim").value,10);
+  $("ownerErr2").textContent=""; $("ownerOk").textContent="";
+  if(isNaN(lim)||lim<0){ $("ownerErr2").textContent="اكتب رقم صحيح لعدد الهدايا"; return; }
+  $("saveOwner").disabled=true;
+  try{
+    const r=await api("game_owner_set",{p_slug:S.slug,p_pin:OWNER_PIN,p_win_percent:pct,p_daily_limit:lim,p_strict_lock:$("strict").checked});
+    if(!r||r.error){ $("ownerErr2").textContent = r&&r.error==="bad_pin" ? "انتهت الجلسة، افتح الإعدادات من جديد" : "القيم غير صحيحة"; return; }
+    $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; $("strict").checked=r.strict_lock!==false; wrHint();
+    $("ownerOk").textContent="✅ انحفظت — تشتغل من هسه";
+    loadStats();
+  }catch(e){ $("ownerErr2").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
+  finally{ $("saveOwner").disabled=false; }
+}
+
+/* ---------- الوجبات ---------- */
+const DAY_NAMES=["أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
+function el(tag,attrs,kids){ const e=document.createElement(tag); Object.entries(attrs||{}).forEach(([k,v])=>{ if(k==="text") e.textContent=v; else if(k==="cls") e.className=v; else e.setAttribute(k,v); }); (kids||[]).forEach(c=>e.appendChild(c)); return e; }
+function renderMeals(list){
+  const box=$("meals"); box.innerHTML="";
+  (list||[]).forEach(m=>box.appendChild(mealCard(m)));
+  $("wrBlock").classList.toggle("hidden", (list||[]).length>0);
+}
+function mealCard(m){
+  m=m||{id:null,name:"",percent:1,daily_limit:null,weekdays:[],active:true};
+  const name=el("input",{type:"text",placeholder:"اسم الوجبة",maxlength:"60"}); name.value=m.name||"";
+  const on=el("input",{type:"checkbox"}); on.checked=m.active!==false;
+  const pct=el("input",{type:"number",min:"0",max:"100",step:"0.1",inputmode:"decimal"}); pct.value=m.percent!=null?Number(m.percent):1;
+  const lim=el("input",{type:"number",min:"0",step:"1",inputmode:"numeric",placeholder:"بدون حد"}); lim.value=m.daily_limit==null?"":m.daily_limit;
+  const days=new Set((m.weekdays||[]).map(Number));
+  const dayBtns=DAY_NAMES.map((d,i)=>{ const b=el("button",{type:"button",cls:"day"+(days.has(i)?" on":""),text:d}); b.onclick=()=>{ days.has(i)?days.delete(i):days.add(i); b.classList.toggle("on"); }; return b; });
+  const save=el("button",{type:"button",cls:"btn",text:m.id?"حفظ":"إضافة"});
+  const msg=el("span",{cls:"mmsg"});
+  const card=el("div",{cls:"meal"+(on.checked?"":" off")},[
+    el("div",{cls:"top"},[name, el("label",{cls:"sw"},[on, el("span",{text:"مفعّلة"})])]),
+    el("div",{cls:"two"},[ el("div",{},[el("label",{text:"نسبة الفوز %"}),pct]), el("div",{},[el("label",{text:"حد يومي"}),lim]) ]),
+    el("div",{cls:"days"},dayBtns),
+    el("div",{cls:"mrow"},[save,msg])
+  ]);
+  async function doSave(){
+    msg.style.color="var(--bad)"; msg.textContent="";
+    const p=parseFloat(pct.value), l=lim.value.trim()===""?null:parseInt(lim.value,10);
+    if(!name.value.trim()){ msg.textContent="اكتب اسم الوجبة"; return; }
+    if(isNaN(p)||p<0||p>100){ msg.textContent="النسبة لازم بين 0 و 100"; return; }
+    if(l!==null&&(isNaN(l)||l<0)){ msg.textContent="الحد اليومي غلط"; return; }
+    save.disabled=true; on.disabled=true;
+    try{
+      const r=await api("game_owner_prize_save",{p_slug:S.slug,p_pin:OWNER_PIN,p_id:m.id,p_name:name.value.trim(),
+        p_percent:p,p_daily_limit:l,p_weekdays:[...days].sort(),p_active:on.checked});
+      if(!r||r.error){ msg.textContent = r&&r.error==="bad_pin" ? "انتهت الجلسة، افتح الإعدادات من جديد" : "ما انحفظت — تأكد من القيم"; return; }
+      renderMeals(r.prizes); loadStats();
+      toastMeal(name.value.trim());
+    }catch(e){ msg.textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
+    finally{ save.disabled=false; on.disabled=false; }
+  }
+  save.onclick=doSave;
+  on.onchange=()=>{ card.classList.toggle("off",!on.checked); if(m.id) doSave(); };
+  return card;
+}
+function toastMeal(n){ $("ownerOk").textContent="✅ انحفظت «"+n+"» — تشتغل من هسه"; }
+$("addMeal").onclick=()=>{ const c=mealCard(null); $("meals").appendChild(c); c.querySelector("input").focus(); };
+
+$("ownerBtn").onclick=ownerOpen;
+$("ownerPin").addEventListener("keydown",e=>{ if(e.key==="Enter") ownerOpen(); });
+$("wr").addEventListener("input",wrHint);
+$("saveOwner").onclick=ownerSave;
 
 $("loginBtn").onclick=login;
 $("pin").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
