@@ -152,6 +152,13 @@
         </div>
         <label for="lim">أقصى عدد هدايا باليوم</label>
         <input id="lim" type="number" inputmode="numeric" min="0" max="10000">
+        <label for="interval">أقل مدة بين جائزة وجائزة (بالدقائق)</label>
+        <input id="interval" type="number" inputmode="numeric" min="0" max="1440">
+        <p class="small" style="margin-top:-6px">60 = جائزة وحدة كل ساعة كحد أقصى · 0 = بدون انتظار</p>
+        <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text);margin:2px 0 12px;cursor:pointer">
+          <input type="checkbox" id="oneWin" style="width:22px;height:22px;margin:3px 0 0;flex:none;accent-color:var(--accent)">
+          <span><b>كل زبون يربح مرة وحدة بس</b><br><span class="small" style="display:block;margin:2px 0 0">يكدر يلعب أكثر من مرة، بس إذا ربح قبل ما يربح مرة ثانية.</span></span>
+        </label>
         <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text);margin:2px 0 12px;cursor:pointer">
           <input type="checkbox" id="strict" style="width:22px;height:22px;margin:3px 0 0;flex:none;accent-color:var(--accent)">
           <span><b>قفل صارم</b><br><span class="small" style="display:block;margin:2px 0 0">يمنع نفس التلفون يلعب مرة ثانية خلال 24 ساعة حتى لو بدّل المتصفح أو فتح خفي. نادراً ممكن يمنع زبون ثاني عنده نفس نوع التلفون ومتصل بنفس الواي فاي.</span></span>
@@ -162,7 +169,7 @@
 
         <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
           <b>🍽️ الوجبات</b>
-          <p class="small" style="margin-top:6px">كل وجبة إلها نسبة فوز: <b>1%</b> يعني من كل 100 زبون ينجح باللعبة، تقريباً واحد يربحها. الأيام: إذا ما اخترت ولا يوم، الوجبة تطلع كل يوم. الحد اليومي: فارغ = بدون حد خاص.</p>
+          <p class="small" style="margin-top:6px">كل وجبة إلها نسبة فوز: <b>1%</b> يعني من كل 100 زبون ينجح باللعبة، تقريباً واحد يربحها. الحد اليومي: فارغ = بدون حد خاص. وتكدر تحدد أي وجبة بأي لعبة تطلع.</p>
           <div id="meals"></div>
           <button class="btn ghost" id="addMeal">+ إضافة وجبة</button>
         </div>
@@ -173,12 +180,12 @@
   <div class="foot">مقدّم من <b id="company"></b></div>
 </div>
 
-<script src="config.js?v=7"></script>
-<script src="api.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="api.js?v=8"></script>
 <script>
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
-const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق",pour:"املأ الكوب",delivery:"وصّل الطلب (جيتك)"};
+const GAME_NAMES={catch:"اصطاد الأكل",memory:"طابق الأطباق",pour:"املأ الكوب",delivery:"وصّل الطلب (جيتك)",xmas:"رحلة بابا نويل"};
 let S={slug:(params.get("r")||"").toLowerCase(), pin:""};
 let current=null;
 
@@ -281,20 +288,25 @@ async function ownerOpen(){
     if(!r||r.error){ $("ownerErr").textContent="رمز المالك غلط"; return; }
     OWNER_PIN=pin; $("ownerPin").value="";
     $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; $("strict").checked=r.strict_lock!==false; wrHint();
+    $("interval").value=r.prize_interval_minutes??60; $("oneWin").checked=r.one_win_per_customer!==false;
+    OWNER_GAMES=Array.isArray(r.games)?r.games:[];
     renderMeals(r.prizes);
     $("ownerLogin").classList.add("hidden"); $("ownerForm").classList.remove("hidden");
   }catch(e){ $("ownerErr").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
   finally{ $("ownerBtn").disabled=false; }
 }
 async function ownerSave(){
-  const pct=+$("wr").value, lim=parseInt($("lim").value,10);
+  const pct=+$("wr").value, lim=parseInt($("lim").value,10), iv=parseInt($("interval").value||"0",10);
   $("ownerErr2").textContent=""; $("ownerOk").textContent="";
   if(isNaN(lim)||lim<0){ $("ownerErr2").textContent="اكتب رقم صحيح لعدد الهدايا"; return; }
+  if(isNaN(iv)||iv<0||iv>1440){ $("ownerErr2").textContent="المدة لازم بين 0 و 1440 دقيقة"; return; }
   $("saveOwner").disabled=true;
   try{
-    const r=await api("game_owner_set",{p_slug:S.slug,p_pin:OWNER_PIN,p_win_percent:pct,p_daily_limit:lim,p_strict_lock:$("strict").checked});
+    const r=await api("game_owner_set",{p_slug:S.slug,p_pin:OWNER_PIN,p_win_percent:pct,p_daily_limit:lim,p_strict_lock:$("strict").checked,
+      p_one_win:$("oneWin").checked,p_interval_minutes:iv});
     if(!r||r.error){ $("ownerErr2").textContent = r&&r.error==="bad_pin" ? "انتهت الجلسة، افتح الإعدادات من جديد" : "القيم غير صحيحة"; return; }
     $("wr").value=Math.round(r.win_percent); $("lim").value=r.daily_prize_limit; $("strict").checked=r.strict_lock!==false; wrHint();
+    $("interval").value=r.prize_interval_minutes??60; $("oneWin").checked=r.one_win_per_customer!==false;
     $("ownerOk").textContent="✅ انحفظت — تشتغل من هسه";
     loadStats();
   }catch(e){ $("ownerErr2").textContent="ما كدرنا نتصل — حاول مرة ثانية"; }
@@ -303,6 +315,7 @@ async function ownerSave(){
 
 /* ---------- الوجبات ---------- */
 const DAY_NAMES=["أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
+let OWNER_GAMES=[];
 function el(tag,attrs,kids){ const e=document.createElement(tag); Object.entries(attrs||{}).forEach(([k,v])=>{ if(k==="text") e.textContent=v; else if(k==="cls") e.className=v; else e.setAttribute(k,v); }); (kids||[]).forEach(c=>e.appendChild(c)); return e; }
 function renderMeals(list){
   const box=$("meals"); box.innerHTML="";
@@ -316,13 +329,18 @@ function mealCard(m){
   const pct=el("input",{type:"number",min:"0",max:"100",step:"0.1",inputmode:"decimal"}); pct.value=m.percent!=null?Number(m.percent):1;
   const lim=el("input",{type:"number",min:"0",step:"1",inputmode:"numeric",placeholder:"بدون حد"}); lim.value=m.daily_limit==null?"":m.daily_limit;
   const days=new Set((m.weekdays||[]).map(Number));
+  const gms=new Set((m.games||[]).map(String));
+  const gameBtns=OWNER_GAMES.map(gk=>{ const b=el("button",{type:"button",cls:"day"+(gms.has(gk)?" on":""),text:GAME_NAMES[gk]||gk}); b.onclick=()=>{ gms.has(gk)?gms.delete(gk):gms.add(gk); b.classList.toggle("on"); }; return b; });
   const dayBtns=DAY_NAMES.map((d,i)=>{ const b=el("button",{type:"button",cls:"day"+(days.has(i)?" on":""),text:d}); b.onclick=()=>{ days.has(i)?days.delete(i):days.add(i); b.classList.toggle("on"); }; return b; });
   const save=el("button",{type:"button",cls:"btn",text:m.id?"حفظ":"إضافة"});
   const msg=el("span",{cls:"mmsg"});
   const card=el("div",{cls:"meal"+(on.checked?"":" off")},[
     el("div",{cls:"top"},[name, el("label",{cls:"sw"},[on, el("span",{text:"مفعّلة"})])]),
     el("div",{cls:"two"},[ el("div",{},[el("label",{text:"نسبة الفوز %"}),pct]), el("div",{},[el("label",{text:"حد يومي"}),lim]) ]),
-    el("div",{cls:"days"},dayBtns),
+    el("label",{text:"الأيام (بدون اختيار = كل يوم)",style:"margin:10px 0 0"}),
+    el("div",{cls:"days",style:"margin-top:4px"},dayBtns),
+    el("label",{text:"الألعاب اللي تطلع بيها (بدون اختيار = كل الألعاب)",style:"margin:4px 0 0"}),
+    el("div",{cls:"days",style:"margin-top:4px"},gameBtns),
     el("div",{cls:"mrow"},[save,msg])
   ]);
   async function doSave(){
@@ -334,7 +352,7 @@ function mealCard(m){
     save.disabled=true; on.disabled=true;
     try{
       const r=await api("game_owner_prize_save",{p_slug:S.slug,p_pin:OWNER_PIN,p_id:m.id,p_name:name.value.trim(),
-        p_percent:p,p_daily_limit:l,p_weekdays:[...days].sort(),p_active:on.checked});
+        p_percent:p,p_daily_limit:l,p_weekdays:[...days].sort(),p_active:on.checked,p_games:[...gms]});
       if(!r||r.error){ msg.textContent = r&&r.error==="bad_pin" ? "انتهت الجلسة، افتح الإعدادات من جديد" : "ما انحفظت — تأكد من القيم"; return; }
       renderMeals(r.prizes); loadStats();
       toastMeal(name.value.trim());

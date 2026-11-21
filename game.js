@@ -92,12 +92,12 @@ function waitText(){
   const parts=[]; if(h>0) parts.push(h+" ساعة"); if(m>0) parts.push(m+" دقيقة");
   return "تكدر تلعب مرة ثانية بعد "+parts.join(" و ");
 }
-function gameRunning(){ return (cg && !cg.done) || (mem && !mem.done) || (pg && !pg.done) || (dg && !dg.done); }
-function stopAll(){ stopMemory(); stopCatch(); stopPour(); stopDelivery(); }
+function gameRunning(){ return (cg && !cg.done) || (mem && !mem.done) || (pg && !pg.done) || (dg && !dg.done) || (xg && !xg.done); }
+function stopAll(){ stopMemory(); stopCatch(); stopPour(); stopDelivery(); stopXmas(); }
 function goHome(){ stopAll(); refreshHome(); show("home"); }
 function refreshHome(){
   const b=blocked();
-  $("goCatch").disabled=b; $("goMemory").disabled=b; $("goPour").disabled=b; $("goDelivery").disabled=b;
+  $("goCatch").disabled=b; $("goMemory").disabled=b; $("goPour").disabled=b; $("goDelivery").disabled=b; $("goXmas").disabled=b;
   $("played").style.display=b?"block":"none";
   if(b){
     $("playedMsg").textContent = (todayPlay ? "✅ لعبت خلال آخر 24 ساعة. " : "⏳ هذا التلفون لعب خلال آخر 24 ساعة. ") + waitText();
@@ -124,13 +124,15 @@ $("goCatch").addEventListener("click",()=>startGame("catch"));
 $("goMemory").addEventListener("click",()=>startGame("memory"));
 $("goPour").addEventListener("click",()=>startGame("pour"));
 $("goDelivery").addEventListener("click",()=>startGame("delivery"));
+$("goXmas").addEventListener("click",()=>startGame("xmas"));
+$("playNow").addEventListener("click",()=>{ refreshHome(); show("home"); });
 
 /* ---------- بداية ونهاية اللعبة (مع السيرفر) ---------- */
 async function startGame(game){
   if(busy) return;
   if(blocked()) return openRecord(todayPlay);
   busy=true;
-  const ids={catch:"goCatch",memory:"goMemory",pour:"goPour",delivery:"goDelivery"};
+  const ids={catch:"goCatch",memory:"goMemory",pour:"goPour",delivery:"goDelivery",xmas:"goXmas"};
   const btn=$(ids[game]); btn.classList.add("loading");
   try{
     const res = await api("game_start",{p_slug:SLUG,p_device:DEVICE,p_game:game,p_table:null,p_fp:FP});
@@ -142,8 +144,8 @@ async function startGame(game){
     todayPlay = res.play;
     if(res.already){ refreshHome(); return openRecord(res.play); }
     curPlay = res.play;
-    show({catch:"catchScreen",memory:"memoryScreen",pour:"pourScreen",delivery:"deliveryScreen"}[game]);
-    ({catch:startCatch,memory:startMemory,pour:startPour,delivery:startDelivery})[game]();
+    show({catch:"catchScreen",memory:"memoryScreen",pour:"pourScreen",delivery:"deliveryScreen",xmas:"xmasScreen"}[game]);
+    ({catch:startCatch,memory:startMemory,pour:startPour,delivery:startDelivery,xmas:startXmas})[game]();
   }catch(e){
     toast("صار خلل بالاتصال، حاول مرة ثانية");
   }finally{
@@ -699,6 +701,258 @@ function drawDelivery(){
   window.addEventListener("keydown",e=>{ if(!dg||dg.done) return; if(e.key==="ArrowLeft") go(-1); else if(e.key==="ArrowRight") go(1); });
 })();
 
+
+/* =========================================================
+   لعبة: رحلة بابا نويل 🎅 (كريسماس)
+   ========================================================= */
+let xg=null;
+const XG=2300, XJUMP=-800, XCUT=-330;
+const GIFT_COLORS=["#e63946","#2a9d8f","#f4c430","#9b5de5","#ff7f11"];
+function xmasCfg(){ const d=(REST&&REST.xmas)||{}; return { seconds:d.seconds||45, target:d.target||35 }; }
+function stopXmas(){ if(xg){ xg.done=true; cancelAnimationFrame(xg.raf); clearTimeout(xg.cd); } }
+function xSpeed(p){ return 220+110*p; }
+function startXmas(){
+  stopAll();
+  const C=xmasCfg(), wrap=$("xmasWrap"), cv=$("xmasCv");
+  const dpr=Math.min(window.devicePixelRatio||1,2), W=wrap.clientWidth, H=wrap.clientHeight;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+"px"; cv.style.height=H+"px";
+  const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const gy=H-62;
+  xg={ ctx,W,H,C,gy, sx:Math.round(W*.26), x:0, y:gy, vy:0, onGround:true, coyote:.1, buffer:0, holding:false,
+       lives:3, inv:0, shake:0, score:0, runT:0, ground:[{x0:-500,x1:620}], plats:[], spikes:[], men:[], gifts:[], pops:[],
+       genX:620, lastType:"flat", started:0, last:0, raf:0, cd:0, done:false, running:false,
+       flakes:Array.from({length:60},()=>({x:Math.random()*W,y:Math.random()*H,r:1+Math.random()*2.2,v:20+Math.random()*40,d:Math.random()*6})),
+       stars:Array.from({length:40},()=>({x:Math.random()*W,y:Math.random()*H*.45,r:Math.random()*1.4+.3})) };
+  xGen(0);
+  xHud(C.seconds); drawXmas();
+  xCountdown(["3","2","1","يلا!"],0);
+}
+function xCountdown(seq,i){
+  const ov=$("xOverlay");
+  if(!xg||xg.done){ ov.classList.remove("show"); return; }
+  if(i>=seq.length){ ov.classList.remove("show"); xg.running=true; xg.started=xg.last=performance.now(); xg.raf=requestAnimationFrame(xLoop); return; }
+  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show");
+  xg.cd=setTimeout(()=>xCountdown(seq,i+1), i===seq.length-1?500:750);
+}
+function xHud(left){
+  const C=xg.C, g=$("xGoal");
+  g.textContent="🎁 "+xg.score+" من "+C.target; g.classList.toggle("done",xg.score>=C.target);
+  $("xLives").textContent="❤️".repeat(Math.max(0,xg.lives))+"🤍".repeat(Math.max(0,3-xg.lives));
+  $("xTime").textContent="⏱ "+Math.max(0,Math.ceil(left));
+  $("xFill").style.width=Math.max(0,left/C.seconds*100)+"%";
+  $("xBar").classList.toggle("low",left<=10);
+}
+function xGiftArc(x0,x1,baseY,n,h){
+  for(let i=0;i<n;i++){ const f=n===1?.5:i/(n-1); xg.gifts.push({x:x0+(x1-x0)*f, y:baseY-Math.sin(f*Math.PI)*h, c:GIFT_COLORS[Math.floor(Math.random()*GIFT_COLORS.length)], got:false}); }
+}
+function xGen(p){
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  while(xg.genX < xg.x - xg.sx + xg.W*2.4){
+    const v=xSpeed(p), air=0.7, maxGap=Math.min(70+95*p, .72*air*v);
+    const r=Math.random(); let type = r<.42?"flat": r<.78?"gap":"plat";
+    if(p<.12 && type==="plat") type="gap";
+    if(xg.lastType==="plat" && type==="plat") type="flat";
+    xg.lastType=type;
+    const gy=xg.gy, x=xg.genX, wantGifts=Math.random()<.6;
+    if(type==="flat"){
+      const len=rnd(260,400), seg={x0:x,x1:x+len}; xg.ground.push(seg);
+      const mid=x+len/2, roll=Math.random();
+      if(p>.08 && roll<.34+.25*p){ xg.spikes.push({x:mid,w:34,h:22}); if(wantGifts) xGiftArc(mid-60,mid+60,gy-46,3,60); }
+      else if(p>.12 && len>=300 && roll<.62+.2*p){ xg.men.push({x:x+len*.7,seg,alive:true,dir:-1,v:30+30*p,squash:0}); if(wantGifts) xGiftArc(x+60,x+170,gy-30,3,0); }
+      else if(wantGifts) xGiftArc(x+60,x+len-60,gy-30,3,0);
+      xg.genX=seg.x1;
+    }else if(type==="gap"){
+      const len=rnd(170,260), gap=rnd(Math.max(55,maxGap*.6),maxGap);
+      xg.ground.push({x0:x,x1:x+len});
+      if(wantGifts) xGiftArc(x+len-10,x+len+gap+10,gy-40,3,85);
+      xg.genX=x+len+gap;
+    }else{
+      const len=rnd(170,230), gap=rnd(190,240), px0=x+len+gap/2-58, py=gy-92;
+      xg.ground.push({x0:x,x1:x+len});
+      xg.plats.push({x0:px0,x1:px0+116,y:py});
+      if(wantGifts) xGiftArc(px0+20,px0+96,py-28,3,0);
+      xg.genX=x+len+gap;
+    }
+  }
+}
+function xOnSolid(wx){ return xg.ground.some(s=>wx+9>s.x0 && wx-9<s.x1); }
+function xHit(why){
+  if(xg.inv>0) return;
+  xg.lives--; xg.inv=1.5; xg.shake=.4; buzz([80,40,80]);
+  xg.pops.push({x:xg.x,y:xg.y-60,t:0,s:why,c:"#ff8a80"});
+}
+function xLoop(t){
+  if(!xg||xg.done) return;
+  const dt=Math.min(.04,(t-xg.last)/1000); xg.last=t;
+  const C=xg.C, el=(t-xg.started)/1000, left=C.seconds-el, p=Math.min(1,el/C.seconds), v=xSpeed(p);
+  xg.x+=v*dt; xg.runT+=dt*v/40;
+  // القفز
+  if(xg.buffer>0) xg.buffer-=dt;
+  if(xg.onGround) xg.coyote=.1; else xg.coyote-=dt;
+  if(xg.buffer>0 && xg.coyote>0){ xg.vy=XJUMP; xg.onGround=false; xg.coyote=0; xg.buffer=0; buzz(6); }
+  if(!xg.holding && xg.vy<XCUT) xg.vy=XCUT;
+  const prevY=xg.y; xg.vy+=XG*dt; xg.y+=xg.vy*dt; xg.onGround=false;
+  if(xg.vy>=0){
+    if(prevY<=xg.gy+1 && xg.y>=xg.gy && xOnSolid(xg.x)){ xg.y=xg.gy; xg.vy=0; xg.onGround=true; }
+    for(const pl of xg.plats){ if(xg.x+9>pl.x0 && xg.x-9<pl.x1 && prevY<=pl.y+1 && xg.y>=pl.y){ xg.y=pl.y; xg.vy=0; xg.onGround=true; } }
+  }
+  if(xg.inv>0) xg.inv-=dt;
+  if(xg.shake>0) xg.shake-=dt;
+  // وقع بحفرة
+  if(xg.y>xg.H+60){
+    xg.inv=0; xHit("وقعت! 💥");
+    const next=xg.ground.find(s=>s.x1>xg.x+40);
+    if(next){ xg.x=Math.max(next.x0+30,xg.x); }
+    xg.y=xg.gy; xg.vy=0; xg.onGround=true;
+  }
+  // ثلج حاد
+  for(const sp of xg.spikes){ if(Math.abs(sp.x-xg.x)<sp.w/2+6 && xg.y>xg.gy-sp.h+5) xHit("آخ! 💥"); }
+  // رجال الثلج
+  for(const m of xg.men){
+    if(!m.alive){ m.squash+=dt; continue; }
+    m.x+=m.dir*m.v*dt; if(m.x<m.seg.x0+20||m.x>m.seg.x1-20){ m.dir*=-1; m.x=Math.max(m.seg.x0+20,Math.min(m.seg.x1-20,m.x)); }
+    const top=xg.gy-46;
+    if(Math.abs(m.x-xg.x)<24 && xg.y>top && xg.y-42<xg.gy){
+      if(xg.vy>0 && prevY<=top+12){ m.alive=false; xg.vy=-560; xg.score+=2; buzz(20); xg.pops.push({x:m.x,y:top-10,t:0,s:"+2 ⛄",c:"#9ff0c2"}); }
+      else xHit("رجل الثلج! 💥");
+    }
+  }
+  // الهدايا
+  for(const g of xg.gifts){ if(!g.got && Math.abs(g.x-xg.x)<22 && Math.abs(g.y-(xg.y-22))<30){ g.got=true; xg.score++; buzz(8); xg.pops.push({x:g.x,y:g.y-14,t:0,s:"+1",c:"#ffe08a"}); } }
+  // تنظيف وتوليد
+  const camL=xg.x-xg.sx-120;
+  xg.ground=xg.ground.filter(s=>s.x1>camL); xg.plats=xg.plats.filter(s=>s.x1>camL);
+  xg.spikes=xg.spikes.filter(s=>s.x>camL); xg.men=xg.men.filter(m=>m.x>camL && m.squash<.6); xg.gifts=xg.gifts.filter(g=>g.x>camL && !(g.got&&g.x<xg.x-40));
+  xg.pops=xg.pops.filter(q=>(q.t+=dt)<.8);
+  xGen(p);
+  xHud(left); drawXmas();
+  if(xg.lives<=0) return finishXmas(false);
+  if(left<=0) return finishXmas(true);
+  xg.raf=requestAnimationFrame(xLoop);
+}
+function finishXmas(completed){
+  if(!xg||xg.done) return;
+  const s=xg.score, C=xg.C; stopXmas();
+  submitResult(s, completed, {
+    extra: completed ? "جمعت "+s+" هدية ووصّلت بابا نويل للبيت 🎄" : "جمعت "+s+" هدية قبل ما تخلص المحاولات",
+    clientPassed: completed && s>=C.target,
+    failMsg: completed ? "ما جمعت هدايا كافية" : "خلصت المحاولات"
+  });
+}
+function drawSanta(ctx,x,y,t,air,blink){
+  if(blink) ctx.globalAlpha=.35;
+  const sw=air?0.6:Math.sin(t*2.2);
+  ctx.fillStyle="rgba(0,0,0,.25)"; if(!air){ ctx.beginPath(); ctx.ellipse(x,y+2,16,4,0,0,Math.PI*2); ctx.fill(); }
+  // الكيس
+  ctx.fillStyle="#8b5a2b"; ctx.beginPath(); ctx.arc(x-14,y-30,11,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#6f4520"; ctx.fillRect(x-16,y-43,5,6);
+  // الرجلين
+  ctx.fillStyle="#b3121f"; ctx.save(); ctx.translate(x-4,y-14); ctx.rotate(sw*.5); ctx.fillRect(-3,0,7,10); ctx.fillStyle="#111"; ctx.fillRect(-4,9,10,5); ctx.restore();
+  ctx.fillStyle="#b3121f"; ctx.save(); ctx.translate(x+4,y-14); ctx.rotate(-sw*.5); ctx.fillRect(-3,0,7,10); ctx.fillStyle="#111"; ctx.fillRect(-4,9,10,5); ctx.restore();
+  // الجسم
+  ctx.fillStyle="#d62828"; rrect(ctx,x-12,y-38,24,25,8); ctx.fill();
+  ctx.fillStyle="#fff"; rrect(ctx,x-12,y-17,24,5,2); ctx.fill(); ctx.fillRect(x-1.5,y-37,3,20);
+  ctx.fillStyle="#111"; ctx.fillRect(x-12,y-25,24,4); ctx.fillStyle="#f4c430"; ctx.fillRect(x-3,y-26,6,6); ctx.fillStyle="#111"; ctx.fillRect(x-1.5,y-24.5,3,3);
+  // الإيد
+  ctx.strokeStyle="#d62828"; ctx.lineWidth=6; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(x+8,y-32); ctx.lineTo(x+15,y-24-sw*4); ctx.stroke();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x+16,y-23-sw*4,3.4,0,Math.PI*2); ctx.fill(); ctx.lineCap="butt";
+  // الراس
+  ctx.fillStyle="#f6c9a8"; ctx.beginPath(); ctx.arc(x+2,y-46,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.moveTo(x-6,y-46); ctx.quadraticCurveTo(x+2,y-30,x+11,y-45); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#111"; ctx.beginPath(); ctx.arc(x+5,y-48,1.3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#e7a07a"; ctx.beginPath(); ctx.arc(x+9,y-46,2,0,Math.PI*2); ctx.fill();
+  // الطاقية
+  ctx.fillStyle="#d62828"; ctx.beginPath(); ctx.moveTo(x-7,y-52); ctx.quadraticCurveTo(x-6,y-66,x-17,y-62); ctx.lineTo(x+10,y-52); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#fff"; rrect(ctx,x-8,y-55,19,5,2.5); ctx.fill(); ctx.beginPath(); ctx.arc(x-17,y-62,3.6,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+}
+function drawXmas(){
+  const {ctx,W,H,gy}=xg, cam=xg.x-xg.sx;
+  ctx.save(); ctx.clearRect(0,0,W,H);
+  if(xg.shake>0) ctx.translate((Math.random()-.5)*9,(Math.random()-.5)*5);
+  // السما
+  const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#071430"); sky.addColorStop(1,"#1d3b6e");
+  ctx.fillStyle=sky; ctx.fillRect(-10,-10,W+20,H+20);
+  ctx.fillStyle="#fff"; xg.stars.forEach(s=>{ ctx.globalAlpha=.6; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); }); ctx.globalAlpha=1;
+  ctx.fillStyle="#fdf3c4"; ctx.beginPath(); ctx.arc(W-48,46,20,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#071430"; ctx.beginPath(); ctx.arc(W-40,40,18,0,Math.PI*2); ctx.fill();
+  // تلال بعيدة
+  ctx.fillStyle="#c9d9f2";
+  ctx.beginPath(); ctx.moveTo(0,H); for(let i=0;i<=W;i+=8){ const wx=i+cam*.15; ctx.lineTo(i,H*.64+16*Math.sin(wx/90)+10*Math.sin(wx/37)); } ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+  // بيوت
+  const B=150, off=-((cam*.4)%B);
+  for(let k=-1;k<W/B+2;k++){
+    const hx=k*B+off, idx=Math.floor((cam*.4)/B)+k, h=34+((idx*37)%3)*10, hy=H*.66-h+4;
+    ctx.fillStyle="#2b3a5c"; ctx.fillRect(hx+30,hy,58,h);
+    ctx.fillStyle="#f2f6ff"; ctx.beginPath(); ctx.moveTo(hx+24,hy+2); ctx.lineTo(hx+59,hy-22); ctx.lineTo(hx+94,hy+2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#ffd166"; ctx.fillRect(hx+40,hy+10,10,10); ctx.fillRect(hx+66,hy+10,10,10);
+    if(((idx%3)+3)%3===0){ ctx.fillStyle="#1b5e3b"; ctx.beginPath(); ctx.moveTo(hx+112,hy+h); ctx.lineTo(hx+122,hy+h-34); ctx.lineTo(hx+132,hy+h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle="#ffd166"; ctx.beginPath(); ctx.arc(hx+122,hy+h-35,2.4,0,Math.PI*2); ctx.fill(); }
+  }
+  // الأرض
+  xg.ground.forEach(s=>{
+    const a=s.x0-cam, b=s.x1-cam; if(b<-20||a>W+20) return;
+    ctx.fillStyle="#5b3a29"; ctx.fillRect(a,gy+10,b-a,H-gy);
+    ctx.fillStyle="#f4f8ff"; rrect(ctx,a-2,gy-4,b-a+4,18,8); ctx.fill();
+    ctx.fillStyle="#dbe7f7"; ctx.fillRect(a,gy+10,b-a,4);
+  });
+  // المنصات (عصا الحلوى)
+  xg.plats.forEach(pl=>{
+    const a=pl.x0-cam, w=pl.x1-pl.x0, y=pl.y;
+    ctx.save(); rrect(ctx,a,y,w,15,7); ctx.clip();
+    ctx.fillStyle="#fff"; ctx.fillRect(a,y,w,15);
+    ctx.fillStyle="#e63946"; for(let i=-2;i<w/10+2;i++){ ctx.beginPath(); ctx.moveTo(a+i*14,y+15); ctx.lineTo(a+i*14+7,y+15); ctx.lineTo(a+i*14+17,y); ctx.lineTo(a+i*14+10,y); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle="#f4f8ff"; rrect(ctx,a-2,y-5,w+4,8,4); ctx.fill();
+  });
+  // ثلج حاد
+  xg.spikes.forEach(sp=>{
+    const x=sp.x-cam; ctx.fillStyle="#9ad1ff"; ctx.strokeStyle="#e8f6ff"; ctx.lineWidth=1.5;
+    [-11,0,11].forEach((dx,i)=>{ const h=i===1?sp.h:sp.h*.72; ctx.beginPath(); ctx.moveTo(x+dx-7,gy); ctx.lineTo(x+dx,gy-h); ctx.lineTo(x+dx+7,gy); ctx.closePath(); ctx.fill(); ctx.stroke(); });
+  });
+  // رجال الثلج
+  xg.men.forEach(m=>{
+    const x=m.x-cam, sq=m.alive?1:Math.max(.15,1-m.squash*1.6);
+    ctx.save(); ctx.translate(x,gy); ctx.scale(1,sq);
+    ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(0,-14,14,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(0,-34,10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#e63946"; ctx.fillRect(-9,-26,18,4);
+    ctx.fillStyle="#111"; ctx.fillRect(-9,-46,18,3); ctx.fillRect(-6,-56,12,10);
+    ctx.beginPath(); ctx.arc(-2,-36,1.6,0,Math.PI*2); ctx.arc(4,-36,1.6,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#111"; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(-5,-40); ctx.lineTo(-1,-38.5); ctx.moveTo(7,-40); ctx.lineTo(3,-38.5); ctx.stroke();
+    ctx.fillStyle="#ff8c1a"; ctx.beginPath(); ctx.moveTo(1,-34); ctx.lineTo(1+m.dir*11,-32.5); ctx.lineTo(1,-31); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+  // الهدايا
+  const bob=Math.sin(performance.now()/220)*2;
+  xg.gifts.forEach(g=>{
+    if(g.got) return; const x=g.x-cam, y=g.y+bob; if(x<-20||x>W+20) return;
+    ctx.fillStyle=g.c; rrect(ctx,x-9,y-9,18,16,3); ctx.fill();
+    ctx.fillStyle="#fff"; ctx.fillRect(x-1.5,y-9,3,16); ctx.fillRect(x-9,y-3,18,3);
+    ctx.beginPath(); ctx.ellipse(x-4,y-11,4,2.6,-.5,0,Math.PI*2); ctx.ellipse(x+4,y-11,4,2.6,.5,0,Math.PI*2); ctx.fill();
+  });
+  drawSanta(ctx,xg.sx,xg.y,xg.runT,!xg.onGround, xg.inv>0 && Math.floor(xg.inv*10)%2===0);
+  // ثلج نازل
+  ctx.fillStyle="rgba(255,255,255,.85)";
+  const now=performance.now()/1000;
+  xg.flakes.forEach(f=>{ f.y+=f.v*(1/60); if(f.y>H) { f.y=-4; f.x=Math.random()*W; } const fx=(f.x - (cam*.3)%W + W + Math.sin(now+f.d)*8)%W; ctx.beginPath(); ctx.arc(fx,f.y,f.r,0,Math.PI*2); ctx.fill(); });
+  // نقاط
+  ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="900 18px Cairo, sans-serif";
+  xg.pops.forEach(q=>{ ctx.globalAlpha=1-q.t/.8; ctx.fillStyle=q.c; ctx.fillText(q.s,q.x-cam,q.y-q.t*45); });
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+(function bindXmasInput(){
+  const wrap=$("xmasWrap");
+  const down=e=>{ if(!xg||xg.done) return; if(e&&e.cancelable) e.preventDefault(); xg.holding=true; xg.buffer=.13; };
+  const up=()=>{ if(xg) xg.holding=false; };
+  wrap.addEventListener("pointerdown",down);
+  ["pointerup","pointercancel"].forEach(ev=>window.addEventListener(ev,up));
+  wrap.addEventListener("pointerleave",up);
+  wrap.addEventListener("contextmenu",e=>e.preventDefault());
+  window.addEventListener("keydown",e=>{ if(!xg||xg.done) return; if(e.code==="Space"||e.key==="ArrowUp"){ e.preventDefault(); if(!xg.holding) down(); } });
+  window.addEventListener("keyup",e=>{ if(e.code==="Space"||e.key==="ArrowUp") up(); });
+})();
+
 /* =========================================================
    النتيجة
    ========================================================= */
@@ -764,7 +1018,11 @@ function applyRestaurant(){
   $("memChip1").textContent="⏱ "+REST.memory.seconds+" ثانية";
   $("pourChip1").textContent="⏱ "+pourSecs()+" ثانية · 🎯 "+pourNeed()+" من 6";
   const games=Array.isArray(REST.games)&&REST.games.length?REST.games:["catch","memory","pour"];
-  [["goDelivery","delivery"],["goCatch","catch"],["goMemory","memory"],["goPour","pour"]].forEach(([id,gm])=>{ $(id).style.display=games.includes(gm)?"":"none"; });
+  [["goDelivery","delivery"],["goXmas","xmas"],["goCatch","catch"],["goMemory","memory"],["goPour","pour"]].forEach(([id,gm])=>{ $(id).style.display=games.includes(gm)?"":"none"; });
+  const XC=xmasCfg(); $("xmasChip1").textContent="⏱ "+XC.seconds+" ثانية · 🎁 "+XC.target;
+  $("landTitle").textContent="ألعاب "+REST.name;
+  const ll=$("landLogo"); ll.innerHTML="";
+  if(/[\/.]/.test(REST.logo||"")){ const im=document.createElement("img"); im.src=REST.logo; im.alt=REST.name; ll.appendChild(im); } else ll.textContent=REST.logo||"🍽️";
   const DC=delCfg(); $("delChip1").textContent="⏱ "+DC.seconds+" ثانية · 📦 "+DC.target+" طلب";
   $("memChip2").textContent="🎁 هدية";
   document.title="العب واربح — "+REST.name;
@@ -786,7 +1044,7 @@ async function init(){
     const st = await api("game_check",{p_slug:SLUG,p_device:DEVICE,p_fp:FP}) || {};
     todayPlay = st.own ? st.play : null;
     lockInfo = (st.next_at && !st.own) ? {next_at:st.next_at} : null;
-    refreshHome(); show("home");
+    refreshHome(); show("landing");
   }catch(e){
     showLoading("ما كدرنا نتصل. تأكد من الإنترنت.", init);
   }

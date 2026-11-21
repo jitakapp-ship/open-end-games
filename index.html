@@ -87,6 +87,32 @@
   .dist{width:100%;text-align:center;font-weight:900;margin:8px 0 0;color:#cfc8ff}
   .del-wrap{height:min(58vh,520px);background:#2a2a30;cursor:pointer;-webkit-touch-callout:none}
   .by-jitak{color:#a9a2ff}
+  /* ---------- Landing ---------- */
+  .landing{justify-content:space-between;position:relative;overflow:hidden;
+    background:radial-gradient(circle at 50% 30%,rgba(200,16,46,.28),transparent 60%)}
+  .land-mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative;z-index:1;text-align:center}
+  .land-logo{width:110px;height:110px;border-radius:28px;display:grid;place-items:center;font-size:56px;overflow:hidden;
+    background:#000;box-shadow:0 0 0 3px var(--accent),0 0 40px rgba(242,165,65,.35)}
+  .land-logo img{width:100%;height:100%;object-fit:cover}
+  .land-title{font-size:2.6rem;font-weight:900;margin:14px 0 0;line-height:1.25}
+  .land-sub{margin:0 0 22px;color:var(--muted);font-weight:700}
+  .play-now{border:0;border-radius:999px;padding:18px 54px;font-size:1.5rem;font-weight:900;font-family:inherit;color:#fff;
+    background:linear-gradient(145deg,#e63946,#a4161a);box-shadow:0 12px 30px rgba(200,16,46,.45),inset 0 -4px 0 rgba(0,0,0,.2);
+    animation:pulse 1.6s ease-in-out infinite;cursor:pointer}
+  .play-now:active{transform:scale(.96)}
+  @keyframes pulse{50%{box-shadow:0 12px 44px rgba(230,57,70,.75),inset 0 -4px 0 rgba(0,0,0,.2)}}
+  .land-by{position:relative;z-index:1;text-align:center;color:var(--muted);font-size:1rem;letter-spacing:.5px;padding-bottom:6px;direction:ltr}
+  .land-by b{color:var(--text)}
+  .snow{position:absolute;inset:-20px 0 0 0;pointer-events:none;
+    background-image:radial-gradient(2px 2px at 20px 30px,#fff,transparent),radial-gradient(2px 2px at 80px 120px,#fff,transparent),
+      radial-gradient(3px 3px at 150px 60px,#fff,transparent),radial-gradient(2px 2px at 220px 160px,#fff,transparent),
+      radial-gradient(3px 3px at 300px 90px,#fff,transparent),radial-gradient(2px 2px at 360px 200px,#fff,transparent);
+    background-size:380px 240px;opacity:.7;animation:snow 9s linear infinite}
+  @keyframes snow{from{background-position:0 0}to{background-position:-60px 240px}}
+  .game-btn.xmas{background:linear-gradient(150deg,#b3121f 0%,#7a0d16 55%,#0f5132 100%);border-color:rgba(255,255,255,.18)}
+  .game-btn.xmas p{color:#ffe1e1}
+  .game-btn.xmas .chip{background:rgba(255,255,255,.18);color:#fff}
+  .xmas-wrap{height:min(58vh,520px);background:#0b1a3a;cursor:pointer;-webkit-touch-callout:none}
   .pour-wrap{-webkit-touch-callout:none;cursor:pointer}
   .hint{color:var(--muted);text-align:center;margin:10px 0 0;font-size:.92rem}
 
@@ -162,6 +188,18 @@
   <p class="tagline" id="noRestMsg">امسح الباركود الموجود على طاولة المطعم حتى تبدأ اللعب</p>
 </section>
 
+<!-- ============ صفحة الترحيب ============ -->
+<section class="screen landing" id="landing">
+  <div class="snow" aria-hidden="true"></div>
+  <div class="land-mid">
+    <div class="land-logo" id="landLogo"></div>
+    <h1 class="land-title" id="landTitle">ألعاب</h1>
+    <p class="land-sub">🎄 العب واربح وجبة مجانية 🎄</p>
+    <button class="play-now" id="playNow">▶ العب الآن</button>
+  </div>
+  <div class="land-by">By <b class="companyName"></b></div>
+</section>
+
 <!-- ============ الصفحة الرئيسية ============ -->
 <section class="screen" id="home">
   <div class="logo" id="logo"></div>
@@ -175,6 +213,14 @@
         <h3>وصّل الطلب 🛵</h3>
         <p>مع تطبيق <b>جيتك</b> — وصّل الطلبات لقلب المدينة وتجنّب الزحمة</p>
         <span class="chips"><span class="chip" id="delChip1"></span><span class="chip">🎁 هدية</span></span>
+      </span>
+    </button>
+    <button class="game-btn xmas" id="goXmas" style="display:none">
+      <span class="ico">🎅</span>
+      <span>
+        <h3>رحلة بابا نويل 🎄</h3>
+        <p>اقفز، اجمع الهدايا، وطيّح رجال الثلج — وصّل بابا نويل للبيت</p>
+        <span class="chips"><span class="chip" id="xmasChip1"></span><span class="chip">🎁 هدية</span></span>
       </span>
     </button>
     <button class="game-btn" id="goCatch">
@@ -233,6 +279,26 @@
     <div class="overlay" id="dOverlay"></div>
   </div>
   <p class="hint">اضغط يمين أو يسار الشاشة حتى تبدّل المسار — اجمع الطلبات 📦 وتجنّب السيارات والحفر<br><span class="by-jitak">التوصيل بواسطة تطبيق <b>جيتك</b></span></p>
+</section>
+
+<!-- ============ رحلة بابا نويل ============ -->
+<section class="screen" id="xmasScreen">
+  <div class="topbar">
+    <button class="backbtn" data-home>→ رجوع</button>
+    <h2>🎅 رحلة بابا نويل</h2>
+    <span class="spacer"></span>
+  </div>
+  <div class="hud">
+    <span class="goal" id="xGoal"></span>
+    <span id="xLives" style="letter-spacing:2px"></span>
+    <span id="xTime"></span>
+  </div>
+  <div class="timebar" id="xBar"><i id="xFill"></i></div>
+  <div class="catch-wrap xmas-wrap" id="xmasWrap">
+    <canvas id="xmasCv"></canvas>
+    <div class="overlay" id="xOverlay"></div>
+  </div>
+  <p class="hint">اضغط حتى يقفز بابا نويل — <b>اضغط أطول = قفزة أعلى</b><br>اجمع الهدايا 🎁، انتبه للحفر والثلج الحاد، وانطّ فوگ رجل الثلج حتى تطيّحه ⛄</p>
 </section>
 
 <!-- ============ اصطاد الأكل ============ -->
@@ -327,6 +393,6 @@
 
 <script src="config.js?v=5"></script>
 <script src="api.js?v=5"></script>
-<script src="game.js?v=7"></script>
+<script src="game.js?v=8"></script>
 </body>
 </html>
