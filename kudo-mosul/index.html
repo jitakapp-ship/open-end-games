@@ -109,7 +109,7 @@
   .dist{width:100%;text-align:center;font-weight:900;margin:8px 0 0;color:#fff}
   .stage{position:relative;width:100%;margin-top:10px;border-radius:22px;overflow:hidden;border:4px solid var(--yellow);box-shadow:0 10px 26px rgba(0,0,0,.3);touch-action:none;-webkit-touch-callout:none;cursor:pointer}
   .stage canvas{display:block;touch-action:none}
-  .s-catch{height:min(60vh,540px);background:linear-gradient(180deg,#fff6e5,#ffe0a8)}
+  .s-catch{height:min(62vh,560px);background:#c4141c}
   .s-run{height:min(58vh,520px);background:#ff6a1f}
   .s-del{height:min(56vh,500px);background:#2a2a30}
   .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:var(--display);font-size:5rem;color:#fff;
@@ -206,7 +206,7 @@
       <span class="ico c1">🍗</span>
       <span class="txt">
         <h3>مطر الكرسبي</h3>
-        <p>التقط الدجاج المقرمش والبركر والرول بسطل كودو — وابتعد عن القنابل 💣</p>
+        <p>كودو ماسك السطل — التقط الكرسبي والتندر ولفّات الزنجر، وابتعد عن القنابل 💣</p>
         <span class="chips"><span class="chip" id="catchChip1"></span><span class="chip" id="catchChip2"></span></span>
       </span>
       <span class="go">▶</span>
@@ -247,8 +247,8 @@
   <div class="topbar"><button class="backbtn" data-home>→ رجوع</button><h2>🍗 مطر الكرسبي</h2><span class="spacer"></span></div>
   <div class="hud"><span class="goal" id="cGoal"></span><span id="cTime"></span></div>
   <div class="timebar" id="cBar"><i id="cFill"></i></div>
-  <div class="stage s-catch" id="catchWrap"><canvas id="catchCv"></canvas><div class="overlay" id="cOverlay"></div></div>
-  <p class="hint">حرّك سطل كودو بإصبعك — كل قطعة +1 ، القنبلة 💣 −3</p>
+  <div class="stage s-catch" id="catchWrap"><canvas id="catchCv" dir="ltr"></canvas><div class="overlay" id="cOverlay"></div></div>
+  <p class="hint">حرّك كودو بإصبعك — الالتقاط بالسطل اللي بإيده بس<br>كل قطعة +1 ، القنبلة 💣 −3</p>
 </section>
 
 <!-- كودو البطل -->
@@ -256,7 +256,7 @@
   <div class="topbar"><button class="backbtn" data-home>→ رجوع</button><h2>🦸 كودو البطل</h2><span class="spacer"></span></div>
   <div class="hud"><span class="goal" id="xGoal"></span><span id="xLives"></span><span id="xTime"></span></div>
   <div class="timebar" id="xBar"><i id="xFill"></i></div>
-  <div class="stage s-run" id="xmasWrap"><canvas id="xmasCv"></canvas><div class="overlay" id="xOverlay"></div></div>
+  <div class="stage s-run" id="xmasWrap"><canvas id="xmasCv" dir="ltr"></canvas><div class="overlay" id="xOverlay"></div></div>
   <p class="hint">اضغط حتى يقفز كودو — <b>اضغط أطول = قفزة أعلى</b><br>اجمع الكرسبي 🍗، انتبه للحفر والنار 🔥، وانطّ فوگ الثعلب 🦊 حتى تطيّحه</p>
 </section>
 
@@ -266,7 +266,7 @@
   <div class="hud"><span class="goal" id="dGoal"></span><span id="dLives"></span><span id="dTime"></span></div>
   <div class="timebar" id="dBar"><i id="dFill"></i></div>
   <div class="dist" id="dDist"></div>
-  <div class="stage s-del" id="delWrap"><canvas id="delCv"></canvas><div class="overlay" id="dOverlay"></div></div>
+  <div class="stage s-del" id="delWrap"><canvas id="delCv" dir="ltr"></canvas><div class="overlay" id="dOverlay"></div></div>
   <p class="hint">اضغط يمين أو يسار الشاشة حتى تبدّل المسار<br>اجمع الطلبات 🍗 وتجنّب السيارات والحفر والحواجز</p>
 </section>
 
@@ -305,6 +305,6 @@
 
 <script src="config.js?v=2"></script>
 <script src="api.js?v=2"></script>
-<script src="game.js?v=3"></script>
+<script src="game.js?v=5"></script>
 </body>
 </html>
