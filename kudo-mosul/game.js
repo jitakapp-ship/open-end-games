@@ -15,19 +15,87 @@ const isKudo = () => true;
 const IMG = src => { const i=new Image(); i.src=src; return i; };
 const RUNNER = IMG("assets/run.png"), SCOOTER = IMG("assets/scooter.png");
 
-/* ---------- الأصوات ---------- */
-// ضع الملفات بمجلد assets بهذي الأسماء: music.mp3 (أثناء اللعب) و win.mp3 (عند الفوز)
-const SND = { music: null, win: null };
+/* ---------- الأصوات: مولّدة داخل المتصفح (بدون ملفات وبدون حقوق) ---------- */
+const AUD=(()=>{
+  let ac=null, master=null, music=null, timer=null;
+  const hz=m=>440*Math.pow(2,(m-69)/12);
+  function init(){
+    try{
+      if(!ac){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; ac=new AC(); master=ac.createGain(); master.gain.value=.55; master.connect(ac.destination); }
+      if(ac.state==="suspended") ac.resume();
+    }catch(e){}
+  }
+  function tone(f,t,d,type,vol,to){
+    const o=ac.createOscillator(), gn=ac.createGain(); o.type=type||"square";
+    o.frequency.setValueAtTime(f,t); if(to) o.frequency.exponentialRampToValueAtTime(to,t+d);
+    gn.gain.setValueAtTime(.0001,t); gn.gain.exponentialRampToValueAtTime(vol||.15,t+.01); gn.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(gn); gn.connect(master); o.start(t); o.stop(t+d+.03);
+  }
+  let nbuf=null;
+  function noise(t,d,vol,hp){
+    if(!nbuf){ nbuf=ac.createBuffer(1,ac.sampleRate*.5,ac.sampleRate); const ch=nbuf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=Math.random()*2-1; }
+    const s=ac.createBufferSource(), f=ac.createBiquadFilter(), gn=ac.createGain(); s.buffer=nbuf;
+    f.type="highpass"; f.frequency.value=hp||1000;
+    gn.gain.setValueAtTime(vol||.1,t); gn.gain.exponentialRampToValueAtTime(.0001,t+d);
+    s.connect(f); f.connect(gn); gn.connect(master); s.start(t); s.stop(t+d+.02);
+  }
+  function kick(t){ const o=ac.createOscillator(), gn=ac.createGain(); o.type="sine"; o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(45,t+.12);
+    gn.gain.setValueAtTime(.35,t); gn.gain.exponentialRampToValueAtTime(.0001,t+.16); o.connect(gn); gn.connect(master); o.start(t); o.stop(t+.18); }
+  // موسيقى لكل لعبة (8 نوتات × 4 مقاطع)
+  const SONGS={
+    catch:{bpm:140, lead:"square",
+      mel:[72,0,76,0,79,0,76,0, 74,0,77,0,81,0,77,0, 76,0,79,0,84,0,79,0, 77,76,74,0,72,0,0,0],
+      bas:[48,0,48,0,55,0,55,0, 50,0,50,0,57,0,57,0, 52,0,52,0,55,0,55,0, 53,0,55,0,48,0,0,0]},
+    xmas:{bpm:160, lead:"square",
+      mel:[65,0,69,72,0,72,74,72, 70,0,69,0,67,0,65,0, 65,0,69,72,0,77,76,74, 72,0,70,0,69,67,65,0],
+      bas:[41,0,41,0,48,0,48,0, 46,0,46,0,43,0,43,0, 41,0,41,0,45,0,45,0, 46,0,48,0,41,0,0,0]},
+    delivery:{bpm:150, lead:"sawtooth",
+      mel:[64,0,0,67,0,0,69,0, 71,0,69,0,67,0,64,0, 64,0,0,67,0,0,71,0, 72,71,69,0,67,0,0,0],
+      bas:[40,40,52,40,40,52,40,52, 43,43,55,43,43,55,43,55, 45,45,57,45,45,57,45,57, 47,47,59,47,45,45,57,45]}
+  };
+  function playMusic(key){
+    stopMusic(); if(!ac) return; const S=SONGS[key]||SONGS.catch, step=60/S.bpm/2;
+    music={S,step,i:0,next:ac.currentTime+.05};
+    timer=setInterval(()=>{
+      if(!music) return;
+      while(music.next<ac.currentTime+.15){
+        const i=music.i%32, t=music.next, m=S.mel[i], bs=S.bas[i];
+        if(m) tone(hz(m),t,step*.9,S.lead,S.lead==="sawtooth"?.045:.06);
+        if(bs) tone(hz(bs),t,step*.95,"triangle",.14);
+        if(i%4===0) kick(t);
+        if(i%8===4) noise(t,.12,.09,1800);
+        if(i%2===1) noise(t,.04,.035,7000);
+        music.i++; music.next+=step;
+      }
+    },25);
+  }
+  function stopMusic(){ if(timer){ clearInterval(timer); timer=null; } music=null; }
+  function sfx(name){
+    if(!ac) return; const t=ac.currentTime+.01;
+    switch(name){
+      case "enter": [72,76,79,84].forEach((m,i)=>tone(hz(m),t+i*.07,.16,"square",.12)); tone(hz(88),t+.28,.35,"triangle",.14); break;
+      case "tick": tone(660,t,.12,"triangle",.22); break;
+      case "go": tone(990,t,.08,"square",.15); tone(1320,t+.08,.3,"square",.15); break;
+      case "collect": tone(hz(84),t,.07,"square",.11); tone(hz(91),t+.05,.1,"square",.1); break;
+      case "jump": tone(380,t,.16,"square",.09,820); break;
+      case "stomp": tone(500,t,.08,"square",.14,180); noise(t,.08,.08,900); break;
+      case "hit": noise(t,.22,.18,300); tone(180,t,.3,"sawtooth",.14,60); break;
+      case "bomb": noise(t,.4,.25,120); tone(120,t,.45,"sawtooth",.18,40); break;
+      case "open": tone(hz(79),t,.06,"square",.1); tone(hz(83),t+.07,.06,"square",.1); tone(hz(86),t+.14,.08,"square",.1); break;
+      case "win": [67,72,76,79].forEach((m,i)=>tone(hz(m),t+i*.12,.18,"square",.13));
+        [72,76,79,84].forEach(m=>tone(hz(m),t+.5,.9,"triangle",.1)); tone(hz(96),t+.5,.9,"square",.05);
+        [0,.5].forEach(d=>noise(t+.5+d*.4,.15,.06,5000)); break;
+      case "lose": [76,72,69,65].forEach((m,i)=>tone(hz(m),t+i*.16,.22,"triangle",.16)); break;
+    }
+  }
+  return { init, playMusic, stopMusic, sfx, get ready(){ return !!ac; } };
+})();
 let soundOn = (()=>{ try{ return localStorage.getItem("kk_sound")!=="off"; }catch(e){ return true; } })();
-function sndInit(){
-  if(SND.music) return;
-  try{
-    SND.music=new Audio("assets/music.mp3"); SND.music.loop=true; SND.music.volume=.45; SND.music.preload="auto";
-    SND.win=new Audio("assets/win.mp3"); SND.win.volume=.9; SND.win.preload="auto";
-  }catch(e){}
-}
-function sndPlay(k){ if(!soundOn||!SND[k]) return; try{ SND[k].currentTime=0; const r=SND[k].play(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
-function sndStop(k){ if(!SND[k]) return; try{ SND[k].pause(); }catch(e){} }
+let CUR_GAME="catch";
+function sndInit(){ AUD.init(); }
+function sfx(n){ if(soundOn) try{ AUD.sfx(n); }catch(e){} }
+function sndPlay(k){ if(!soundOn) return; try{ if(k==="music") AUD.playMusic(CUR_GAME); else AUD.sfx(k); }catch(e){} }
+function sndStop(k){ try{ if(k==="music") AUD.stopMusic(); }catch(e){} }
 function setSound(on){
   soundOn=on; try{ localStorage.setItem("kk_sound",on?"on":"off"); }catch(e){}
   const b=document.getElementById("soundBtn"); if(b){ b.textContent=on?"🔊":"🔇"; b.setAttribute("aria-label",on?"كتم الصوت":"تشغيل الصوت"); }
@@ -147,7 +215,7 @@ $("showMine").addEventListener("click", async ()=>{
 $("goCatch").addEventListener("click",()=>startGame("catch"));
 $("goDelivery").addEventListener("click",()=>startGame("delivery"));
 $("goXmas").addEventListener("click",()=>startGame("xmas"));
-$("playNow").addEventListener("click",()=>{ sndInit(); refreshHome(); show("home"); });
+$("playNow").addEventListener("click",()=>{ sndInit(); sfx("enter"); refreshHome(); show("home"); });
 $("soundBtn").addEventListener("click",()=>{ sndInit(); setSound(!soundOn); });
 setSound(soundOn);
 
@@ -167,7 +235,7 @@ async function startGame(game){
     }
     todayPlay = res.play;
     if(res.already){ refreshHome(); return openRecord(res.play); }
-    curPlay = res.play;
+    curPlay = res.play; CUR_GAME = game; sndInit();
     show({catch:"catchScreen",delivery:"deliveryScreen",xmas:"xmasScreen"}[game]);
     ({catch:startCatch,delivery:startDelivery,xmas:startXmas})[game]();
   }catch(e){
@@ -220,7 +288,7 @@ $("boxes").querySelectorAll(".gbox").forEach(b=>b.addEventListener("click",()=>{
   const p=boxPlay, extra=boxExtra; boxPlay=null;
   const wrap=$("boxes"); wrap.classList.add("locked");
   wrap.querySelectorAll(".gbox").forEach(o=>{ if(o!==b) o.classList.add("dim"); });
-  b.classList.add("open"); buzz(40);
+  b.classList.add("open"); buzz(40); sfx("open");
   lsSet(boxKey(p),"1");
   setTimeout(()=>{ b.textContent = p.won?"🎉":"💨"; }, 900);
   setTimeout(()=>showResult(p,true,extra), 1700);
@@ -250,7 +318,7 @@ function countdown(seq,i){
   const ov=$("cOverlay");
   if(!cg||cg.done){ ov.classList.remove("show"); return; }
   if(i>=seq.length){ ov.classList.remove("show"); sndPlay("music"); cg.running=true; cg.started=cg.last=performance.now(); cg.raf=requestAnimationFrame(catchLoop); return; }
-  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show");
+  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show"); sfx(i===seq.length-1?"go":"tick");
   cg.cd=setTimeout(()=>countdown(seq,i+1), i===seq.length-1?500:750);
 }
 function catchHud(left){
@@ -283,8 +351,8 @@ function catchLoop(t){
     const prevY=it.y; it.y+=it.v*dt; it.r+=it.vr*dt;
     // يلتقط بس إذا الأكلة دخلت فتحة السطل من فوگ
     if(prevY<=B.rimY+12 && it.y>=B.rimY-14 && Math.abs(it.x-cg.bx)<B.half+16){
-      if(it.kind==="bomb"){ cg.score=Math.max(0,cg.score-3); cg.shake=.35; buzz(90); cg.pops.push({x:it.x,y:B.rimY-30,t:0,s:"−3",c:"#ffffff"}); }
-      else{ cg.score++; cg.bump=.18; buzz(8); cg.pops.push({x:it.x,y:B.rimY-30,t:0,s:"+1",c:"#ffd84d"}); }
+      if(it.kind==="bomb"){ cg.score=Math.max(0,cg.score-3); cg.shake=.35; buzz(90); sfx("bomb"); cg.pops.push({x:it.x,y:B.rimY-30,t:0,s:"−3",c:"#ffffff"}); }
+      else{ cg.score++; cg.bump=.18; buzz(8); sfx("collect"); cg.pops.push({x:it.x,y:B.rimY-30,t:0,s:"+1",c:"#ffd84d"}); }
       return false;
     }
     return it.y<cg.H+50;
@@ -391,7 +459,7 @@ function dCountdown(seq,i){
   const ov=$("dOverlay");
   if(!dg||dg.done){ ov.classList.remove("show"); return; }
   if(i>=seq.length){ ov.classList.remove("show"); sndPlay("music"); dg.running=true; dg.started=dg.last=performance.now(); dg.raf=requestAnimationFrame(delLoop); return; }
-  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show");
+  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show"); sfx(i===seq.length-1?"go":"tick");
   dg.cd=setTimeout(()=>dCountdown(seq,i+1), i===seq.length-1?500:750);
 }
 function dHud(left){
@@ -450,9 +518,9 @@ function delLoop(t){
       const ex=laneX(e.l);
       const hitX=Math.abs(ex-px) < (e.w+pw)/2-4, hitY=Math.abs(e.y-py) < (e.h+ph)/2-6;
       if(hitX&&hitY){
-        if(e.t==="bag"){ dg.score++; buzz(10); dg.pops.push({x:ex,y:py-46,t:0,s:"+1 🍗",c:"#9ff0c2"}); return false; }
+        if(e.t==="bag"){ dg.score++; buzz(10); sfx("collect"); dg.pops.push({x:ex,y:py-46,t:0,s:"+1 🍗",c:"#9ff0c2"}); return false; }
         if(dg.inv<=0){
-          e.hit=true; dg.lives--; dg.inv=1.3; dg.shake=.4; buzz([80,40,80]);
+          e.hit=true; dg.lives--; dg.inv=1.3; dg.shake=.4; buzz([80,40,80]); sfx("hit");
           dg.pops.push({x:px,y:py-50,t:0,s:e.t==="hole"?"حفرة! 💥":"اصطدام! 💥",c:"#ff7a6e"});
           if(dg.lives<=0){ dHud(left); drawDelivery(); return finishDelivery(false), false; }
         }
@@ -580,7 +648,7 @@ function xCountdown(seq,i){
   const ov=$("xOverlay");
   if(!xg||xg.done){ ov.classList.remove("show"); return; }
   if(i>=seq.length){ ov.classList.remove("show"); sndPlay("music"); xg.running=true; xg.started=xg.last=performance.now(); xg.raf=requestAnimationFrame(xLoop); return; }
-  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show");
+  ov.innerHTML="<span>"+seq[i]+"</span>"; ov.classList.add("show"); sfx(i===seq.length-1?"go":"tick");
   xg.cd=setTimeout(()=>xCountdown(seq,i+1), i===seq.length-1?500:750);
 }
 function xHud(left){
@@ -627,7 +695,7 @@ function xGen(p){
 function xOnSolid(wx){ return xg.ground.some(s=>wx+9>s.x0 && wx-9<s.x1); }
 function xHit(why){
   if(xg.inv>0) return;
-  xg.lives--; xg.inv=1.5; xg.shake=.4; buzz([80,40,80]);
+  xg.lives--; xg.inv=1.5; xg.shake=.4; buzz([80,40,80]); sfx("hit");
   xg.pops.push({x:xg.x,y:xg.y-60,t:0,s:why,c:"#ff8a80"});
 }
 function xLoop(t){
@@ -638,7 +706,7 @@ function xLoop(t){
   // القفز
   if(xg.buffer>0) xg.buffer-=dt;
   if(xg.onGround) xg.coyote=.1; else xg.coyote-=dt;
-  if(xg.buffer>0 && xg.coyote>0){ xg.vy=XJUMP; xg.onGround=false; xg.coyote=0; xg.buffer=0; buzz(6); }
+  if(xg.buffer>0 && xg.coyote>0){ xg.vy=XJUMP; xg.onGround=false; xg.coyote=0; xg.buffer=0; buzz(6); sfx("jump"); }
   if(!xg.holding && xg.vy<XCUT) xg.vy=XCUT;
   const prevY=xg.y; xg.vy+=XG*dt; xg.y+=xg.vy*dt; xg.onGround=false;
   if(xg.vy>=0){
@@ -662,12 +730,12 @@ function xLoop(t){
     m.x+=m.dir*m.v*dt; if(m.x<m.seg.x0+20||m.x>m.seg.x1-20){ m.dir*=-1; m.x=Math.max(m.seg.x0+20,Math.min(m.seg.x1-20,m.x)); }
     const top=xg.gy-46;
     if(Math.abs(m.x-xg.x)<24 && xg.y>top && xg.y-42<xg.gy){
-      if(xg.vy>0 && prevY<=top+12){ m.alive=false; xg.vy=-560; xg.score+=2; buzz(20); xg.pops.push({x:m.x,y:top-10,t:0,s:isKudo()?"+2 🦊":"+2 ⛄",c:"#9ff0c2"}); }
+      if(xg.vy>0 && prevY<=top+12){ m.alive=false; xg.vy=-560; xg.score+=2; buzz(20); sfx("stomp"); xg.pops.push({x:m.x,y:top-10,t:0,s:isKudo()?"+2 🦊":"+2 ⛄",c:"#9ff0c2"}); }
       else xHit(isKudo()?"ثعلب! 💥":"رجل الثلج! 💥");
     }
   }
   // الهدايا
-  for(const g of xg.gifts){ if(!g.got && Math.abs(g.x-xg.x)<22 && Math.abs(g.y-(xg.y-22))<30){ g.got=true; xg.score++; buzz(8); xg.pops.push({x:g.x,y:g.y-14,t:0,s:"+1",c:"#ffe08a"}); } }
+  for(const g of xg.gifts){ if(!g.got && Math.abs(g.x-xg.x)<22 && Math.abs(g.y-(xg.y-22))<30){ g.got=true; xg.score++; buzz(8); sfx("collect"); xg.pops.push({x:g.x,y:g.y-14,t:0,s:"+1",c:"#ffe08a"}); } }
   // تنظيف وتوليد
   const camL=xg.x-xg.sx-120;
   xg.ground=xg.ground.filter(s=>s.x1>camL); xg.plats=xg.plats.filter(s=>s.x1>camL);
@@ -857,6 +925,7 @@ function showResult(p, fresh, extra, failMsg){
   stopAll();
   if(extra===undefined) extra=defaultExtra(p);
   if(!p.won){
+    if(fresh){ sndStop("music"); sfx("lose"); }
     $("rEmoji").textContent="😅";
     $("rTitle").textContent = p.passed ? "الصندوق طلع فارغ" : (failMsg || "ما وصلت للهدف");
     $("rPrize").textContent="";
@@ -875,7 +944,7 @@ function showResult(p, fresh, extra, failMsg){
     note.textContent = p.redeemed ? "✅ تم استخدام هذا الكوبون" : "📱 أظهر هذه الشاشة للكاشير قبل الدفع";
     note.classList.toggle("used", !!p.redeemed);
     $("couponBlock").style.display="block";
-    if(fresh){ confetti(90); buzz([60,40,60]); sndStop("music"); sndPlay("win"); }
+    if(fresh){ confetti(90); buzz([60,40,60]); sndStop("music"); sfx("win"); }
   }
   clearInterval(clockTimer);
   const upd=()=>{ $("liveClock").textContent=new Date().toLocaleTimeString("ar-IQ"); };
