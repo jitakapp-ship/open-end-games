@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#1a1410">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:,">
 <title>العب واربح</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -113,6 +116,23 @@
   .game-btn.xmas p{color:#ffe1e1}
   .game-btn.xmas .chip{background:rgba(255,255,255,.18);color:#fff}
   .xmas-wrap{height:min(58vh,520px);background:#0b1a3a;cursor:pointer;-webkit-touch-callout:none}
+  /* ---------- KUDO KUDO skin ---------- */
+  .land-hero{width:min(80vw,330px);margin-bottom:-26px;position:relative;z-index:0}
+  .land-hero img{width:100%;display:block;border-radius:26px;
+    -webkit-mask-image:linear-gradient(to bottom,#000 70%,transparent);mask-image:linear-gradient(to bottom,#000 70%,transparent)}
+  body.skin-kudo{--card:#5c0a10;--card2:#7a0f17;--muted:#ffd6cf;
+    background:radial-gradient(circle at 50% -10%,#ff4b2b 0%,#b3001b 45%,#3d0006 100%);background-attachment:fixed}
+  .skin-kudo .landing{background:radial-gradient(circle at 50% 35%,rgba(255,199,44,.25),transparent 60%)}
+  .skin-kudo .land-logo{width:86px;height:86px;border-radius:22px;background:#fff;box-shadow:0 0 0 3px #ffc72c,0 10px 30px rgba(0,0,0,.35);position:relative;z-index:1}
+  .skin-kudo .play-now{background:linear-gradient(145deg,#ffd84d,#ffb000);color:#6b0010;box-shadow:0 12px 30px rgba(255,176,0,.45),inset 0 -4px 0 rgba(0,0,0,.15)}
+  .skin-kudo .snow{display:none}
+  .skin-kudo .game-btn{border-color:rgba(255,199,44,.25)}
+  .skin-kudo .game-btn.xmas{background:linear-gradient(150deg,#ffc72c 0%,#ff8a00 50%,#e4002b 100%)}
+  .skin-kudo .game-btn.xmas h3{color:#3d0006}
+  .skin-kudo .game-btn.xmas p{color:#4a0a00}
+  .skin-kudo .game-btn.xmas .chip{background:rgba(61,0,6,.18);color:#3d0006}
+  .skin-kudo .xmas-wrap{background:#ff6a1f}
+  .skin-kudo .logo{background:#fff}
   .pour-wrap{-webkit-touch-callout:none;cursor:pointer}
   .hint{color:var(--muted);text-align:center;margin:10px 0 0;font-size:.92rem}
 
@@ -192,9 +212,10 @@
 <section class="screen landing" id="landing">
   <div class="snow" aria-hidden="true"></div>
   <div class="land-mid">
+    <div class="land-hero" id="landHero" style="display:none"></div>
     <div class="land-logo" id="landLogo"></div>
     <h1 class="land-title" id="landTitle">ألعاب</h1>
-    <p class="land-sub">🎄 العب واربح وجبة مجانية 🎄</p>
+    <p class="land-sub" id="landSub">🎄 العب واربح وجبة مجانية 🎄</p>
     <button class="play-now" id="playNow">▶ العب الآن</button>
   </div>
   <div class="land-by">By <b class="companyName"></b></div>
@@ -285,7 +306,7 @@
 <section class="screen" id="xmasScreen">
   <div class="topbar">
     <button class="backbtn" data-home>→ رجوع</button>
-    <h2>🎅 رحلة بابا نويل</h2>
+    <h2 id="xmasTitle">🎅 رحلة بابا نويل</h2>
     <span class="spacer"></span>
   </div>
   <div class="hud">
@@ -298,7 +319,7 @@
     <canvas id="xmasCv"></canvas>
     <div class="overlay" id="xOverlay"></div>
   </div>
-  <p class="hint">اضغط حتى يقفز بابا نويل — <b>اضغط أطول = قفزة أعلى</b><br>اجمع الهدايا 🎁، انتبه للحفر والثلج الحاد، وانطّ فوگ رجل الثلج حتى تطيّحه ⛄</p>
+  <p class="hint" id="xmasHint">اضغط حتى يقفز بابا نويل — <b>اضغط أطول = قفزة أعلى</b><br>اجمع الهدايا 🎁، انتبه للحفر والثلج الحاد، وانطّ فوگ رجل الثلج حتى تطيّحه ⛄</p>
 </section>
 
 <!-- ============ اصطاد الأكل ============ -->
@@ -391,8 +412,8 @@
   <div class="foot"><div class="powered">مقدّم من <b class="companyName"></b></div></div>
 </section>
 
-<script src="config.js?v=5"></script>
-<script src="api.js?v=5"></script>
-<script src="game.js?v=8"></script>
+<script src="config.js?v=9"></script>
+<script src="api.js?v=9"></script>
+<script src="game.js?v=9"></script>
 </body>
 </html>

@@ -2,6 +2,7 @@
    منطق الألعاب — ما تحتاج تعدّل هنا.
    الإعدادات: config.js (الاتصال) + جدول game_restaurants (المطاعم)
    ========================================================= */
+if (window.top !== window.self) { try { window.top.location = window.self.location.href; } catch (e) { document.documentElement.innerHTML = ""; } }
 const $ = id => document.getElementById(id);
 const APP = window.APP || {};
 const COMPANY = APP.COMPANY || { name: "" };
@@ -10,6 +11,7 @@ const SLUG = (params.get("r") || "").trim().toLowerCase();
 const DEFAULT_FOODS = ["🍔","🍕","🌯","🍟","🥤","🍰"];
 
 let REST = null;       // إعدادات المطعم من السيرفر
+const isKudo = () => !!(REST && REST.skin === "kudo");
 let todayPlay = null;  // لعبة اليوم لهذا الجهاز
 let curPlay = null;    // اللعبة الجارية
 let busy = false;
@@ -147,7 +149,7 @@ async function startGame(game){
     show({catch:"catchScreen",memory:"memoryScreen",pour:"pourScreen",delivery:"deliveryScreen",xmas:"xmasScreen"}[game]);
     ({catch:startCatch,memory:startMemory,pour:startPour,delivery:startDelivery,xmas:startXmas})[game]();
   }catch(e){
-    toast("صار خلل بالاتصال، حاول مرة ثانية");
+    toast(String(e&&e.message).includes("rate_limited") ? "محاولات كثيرة — انتظر شوية وجرّب مرة ثانية" : "صار خلل بالاتصال، حاول مرة ثانية");
   }finally{
     busy=false; btn.classList.remove("loading");
   }
@@ -545,7 +547,7 @@ function dCountdown(seq,i){
 }
 function dHud(left){
   const D=dg.D;
-  const g=$("dGoal"); g.textContent="📦 "+dg.score+" من "+D.target; g.classList.toggle("done",dg.score>=D.target);
+  const g=$("dGoal"); g.textContent=(isKudo()?"🍗 ":"📦 ")+dg.score+" من "+D.target; g.classList.toggle("done",dg.score>=D.target);
   $("dLives").textContent="❤️".repeat(Math.max(0,dg.lives))+"🤍".repeat(Math.max(0,3-dg.lives));
   $("dTime").textContent="⏱ "+Math.max(0,Math.ceil(left));
   $("dFill").style.width=Math.max(0,left/D.seconds*100)+"%";
@@ -634,8 +636,16 @@ function drawScooter(ctx,x,y,blink){
   ctx.fillStyle="#fff"; rrect(ctx,x-16,y+2,32,28,5); ctx.fill();
   ctx.strokeStyle="#5a2be0"; ctx.lineWidth=2.5; rrect(ctx,x-16,y+2,32,28,5); ctx.stroke();
   if(JITAK_IMG.complete&&JITAK_IMG.naturalWidth){ ctx.drawImage(JITAK_IMG,x-11,y+5,22,22); }
+  if(isKudo()){
+    // راس الدجاجة من فوگ: عُرف أحمر + منقار + نظارة
+    ctx.fillStyle="#ffb000"; ctx.beginPath(); ctx.moveTo(x-4,y-15); ctx.lineTo(x,y-24); ctx.lineTo(x+4,y-15); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x,y-8,10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#111"; rrect(ctx,x-9,y-14,18,4,2); ctx.fill();
+    ctx.fillStyle="#e4002b"; [-5,-1,3].forEach(dy=>{ ctx.beginPath(); ctx.arc(x,y+dy-4,3,0,Math.PI*2); ctx.fill(); });
+  }else{
   ctx.fillStyle="#5a2be0"; ctx.beginPath(); ctx.arc(x,y-8,9,0,Math.PI*2); ctx.fill();
   ctx.fillStyle="rgba(255,255,255,.55)"; ctx.beginPath(); ctx.arc(x,y-11,5,Math.PI,0); ctx.fill();
+  }
   ctx.globalAlpha=1;
 }
 function drawDelivery(){
@@ -679,7 +689,7 @@ function drawDelivery(){
       ctx.restore();
     }else if(e.t==="bag"){
       ctx.fillStyle="rgba(255,214,102,.28)"; ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.fill();
-      ctx.font="28px system-ui, 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; ctx.fillText("🥡",x,y+1);
+      ctx.font="28px system-ui, 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; ctx.fillText(isKudo()?"🍗":"🥡",x,y+1);
     }else if(e.t==="sign"){
       ctx.fillStyle="#5d5d66"; ctx.fillRect(roadL+6,y-e.h/2,4,e.h+18); ctx.fillRect(roadL+roadW-10,y-e.h/2,4,e.h+18);
       ctx.fillStyle="#1b7f3a"; rrect(ctx,dg.W/2-e.w/2,y-e.h/2,e.w,e.h,6); ctx.fill();
@@ -736,7 +746,7 @@ function xCountdown(seq,i){
 }
 function xHud(left){
   const C=xg.C, g=$("xGoal");
-  g.textContent="🎁 "+xg.score+" من "+C.target; g.classList.toggle("done",xg.score>=C.target);
+  g.textContent=(isKudo()?"🍗 ":"🎁 ")+xg.score+" من "+C.target; g.classList.toggle("done",xg.score>=C.target);
   $("xLives").textContent="❤️".repeat(Math.max(0,xg.lives))+"🤍".repeat(Math.max(0,3-xg.lives));
   $("xTime").textContent="⏱ "+Math.max(0,Math.ceil(left));
   $("xFill").style.width=Math.max(0,left/C.seconds*100)+"%";
@@ -806,15 +816,15 @@ function xLoop(t){
     xg.y=xg.gy; xg.vy=0; xg.onGround=true;
   }
   // ثلج حاد
-  for(const sp of xg.spikes){ if(Math.abs(sp.x-xg.x)<sp.w/2+6 && xg.y>xg.gy-sp.h+5) xHit("آخ! 💥"); }
+  for(const sp of xg.spikes){ if(Math.abs(sp.x-xg.x)<sp.w/2+6 && xg.y>xg.gy-sp.h+5) xHit(isKudo()?"حار! 🔥":"آخ! 💥"); }
   // رجال الثلج
   for(const m of xg.men){
     if(!m.alive){ m.squash+=dt; continue; }
     m.x+=m.dir*m.v*dt; if(m.x<m.seg.x0+20||m.x>m.seg.x1-20){ m.dir*=-1; m.x=Math.max(m.seg.x0+20,Math.min(m.seg.x1-20,m.x)); }
     const top=xg.gy-46;
     if(Math.abs(m.x-xg.x)<24 && xg.y>top && xg.y-42<xg.gy){
-      if(xg.vy>0 && prevY<=top+12){ m.alive=false; xg.vy=-560; xg.score+=2; buzz(20); xg.pops.push({x:m.x,y:top-10,t:0,s:"+2 ⛄",c:"#9ff0c2"}); }
-      else xHit("رجل الثلج! 💥");
+      if(xg.vy>0 && prevY<=top+12){ m.alive=false; xg.vy=-560; xg.score+=2; buzz(20); xg.pops.push({x:m.x,y:top-10,t:0,s:isKudo()?"+2 🦊":"+2 ⛄",c:"#9ff0c2"}); }
+      else xHit(isKudo()?"ثعلب! 💥":"رجل الثلج! 💥");
     }
   }
   // الهدايا
@@ -834,9 +844,10 @@ function finishXmas(completed){
   if(!xg||xg.done) return;
   const s=xg.score, C=xg.C; stopXmas();
   submitResult(s, completed, {
-    extra: completed ? "جمعت "+s+" هدية ووصّلت بابا نويل للبيت 🎄" : "جمعت "+s+" هدية قبل ما تخلص المحاولات",
+    extra: isKudo() ? (completed ? "جمعت "+s+" قطعة دجاج مقرمش 🍗" : "جمعت "+s+" قطعة قبل ما تخلص المحاولات")
+                    : (completed ? "جمعت "+s+" هدية ووصّلت بابا نويل للبيت 🎄" : "جمعت "+s+" هدية قبل ما تخلص المحاولات"),
     clientPassed: completed && s>=C.target,
-    failMsg: completed ? "ما جمعت هدايا كافية" : "خلصت المحاولات"
+    failMsg: completed ? (isKudo()?"ما جمعت دجاج كافي":"ما جمعت هدايا كافية") : "خلصت المحاولات"
   });
 }
 function drawSanta(ctx,x,y,t,air,blink){
@@ -866,10 +877,103 @@ function drawSanta(ctx,x,y,t,air,blink){
   ctx.fillStyle="#fff"; rrect(ctx,x-8,y-55,19,5,2.5); ctx.fill(); ctx.beginPath(); ctx.arc(x-17,y-62,3.6,0,Math.PI*2); ctx.fill();
   ctx.globalAlpha=1;
 }
+function drawChicken(ctx,x,y,t,air,blink){
+  if(blink) ctx.globalAlpha=.35;
+  const sw=air?0.6:Math.sin(t*2.2), fl=Math.sin(t*1.6);
+  if(!air){ ctx.fillStyle="rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(x,y+2,15,4,0,0,Math.PI*2); ctx.fill(); }
+  // العباية
+  ctx.fillStyle="#c8001e"; ctx.beginPath(); ctx.moveTo(x-6,y-40); ctx.quadraticCurveTo(x-26,y-30+fl*3,x-30,y-12+fl*4); ctx.lineTo(x-12,y-16); ctx.closePath(); ctx.fill();
+  // الرجلين
+  ctx.strokeStyle="#f6a800"; ctx.lineWidth=3.2; ctx.lineCap="round";
+  [[-4,sw],[5,-sw]].forEach(([dx,s])=>{ ctx.save(); ctx.translate(x+dx,y-12); ctx.rotate(s*.5); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,10); ctx.lineTo(5,12); ctx.moveTo(0,10); ctx.lineTo(-3,12); ctx.stroke(); ctx.restore(); });
+  ctx.lineCap="butt";
+  // الجسم
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.ellipse(x,y-25,13,15,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#e4002b"; rrect(ctx,x-12,y-31,24,17,7); ctx.fill();
+  ctx.fillStyle="#ffc72c"; ctx.fillRect(x-12,y-17,24,3);
+  ctx.fillStyle="#fff"; ctx.font="900 6px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("KUDO",x,y-25);
+  // الإيد بالكف الأصفر
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.ellipse(x+10,y-27-sw*2,4,7,-.6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#ffc72c"; ctx.beginPath(); ctx.arc(x+14,y-22-sw*3,3.6,0,Math.PI*2); ctx.fill();
+  // الراس
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x+3,y-44,9.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#e4002b"; [[-1,-55,3.4],[3,-57,3.8],[7,-55,3.4]].forEach(([dx,dy,r])=>{ ctx.beginPath(); ctx.arc(x+dx,y+dy,r,0,Math.PI*2); ctx.fill(); });
+  ctx.fillStyle="#ffb000"; ctx.beginPath(); ctx.moveTo(x+11,y-45); ctx.lineTo(x+19,y-42); ctx.lineTo(x+11,y-39); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#e4002b"; ctx.beginPath(); ctx.arc(x+12,y-36,2.6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#111"; rrect(ctx,x+1,y-49,12,5,2); ctx.fill(); ctx.fillRect(x-6,y-48,8,1.5);
+  ctx.globalAlpha=1;
+}
 function drawXmas(){
-  const {ctx,W,H,gy}=xg, cam=xg.x-xg.sx;
+  const {ctx,W,H,gy}=xg, cam=xg.x-xg.sx, K=isKudo();
   ctx.save(); ctx.clearRect(0,0,W,H);
   if(xg.shake>0) ctx.translate((Math.random()-.5)*9,(Math.random()-.5)*5);
+  if(K){
+    // سما الغروب بألوان كودو
+    const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#b0001a"); sky.addColorStop(.6,"#ff5a1f"); sky.addColorStop(1,"#ffb347");
+    ctx.fillStyle=sky; ctx.fillRect(-10,-10,W+20,H+20);
+    ctx.fillStyle="rgba(255,224,138,.35)"; ctx.beginPath(); ctx.arc(W-70,74,52,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#ffe08a"; ctx.beginPath(); ctx.arc(W-70,74,32,0,Math.PI*2); ctx.fill();
+    // مدينة بعيدة + منارة مايلة
+    const B1=110, off1=-((cam*.15)%B1);
+    for(let k=-1;k<W/B1+2;k++){
+      const bx=k*B1+off1, idx=Math.floor((cam*.15)/B1)+k, h=40+((idx*53)%4)*14;
+      ctx.fillStyle="rgba(110,0,16,.55)"; ctx.fillRect(bx,H*.62-h,60,h+40); ctx.fillRect(bx+66,H*.62-h*.6,34,h*.6+40);
+      if(((idx%5)+5)%5===0){ ctx.save(); ctx.translate(bx+40,H*.62-h); ctx.rotate(-.08); ctx.fillRect(-5,-70,10,72); ctx.beginPath(); ctx.arc(0,-72,7,Math.PI,0); ctx.fill(); ctx.restore(); }
+    }
+    const B2=140, off2=-((cam*.4)%B2);
+    for(let k=-1;k<W/B2+2;k++){
+      const bx=k*B2+off2, idx=Math.floor((cam*.4)/B2)+k, h=46+((idx*29)%3)*16, by=H*.7-h;
+      ctx.fillStyle="#8a0715"; ctx.fillRect(bx+20,by,76,h+60);
+      ctx.fillStyle="#ffd36b"; for(let r=0;r<Math.floor(h/18);r++) for(let c=0;c<3;c++) if(((idx+r+c)%3)) ctx.fillRect(bx+28+c*22,by+8+r*18,10,8);
+    }
+    // الأرض المقرمشة
+    xg.ground.forEach(s=>{
+      const a=s.x0-cam, b=s.x1-cam; if(b<-20||a>W+20) return;
+      ctx.fillStyle="#a8530f"; ctx.fillRect(a,gy+10,b-a,H-gy);
+      ctx.fillStyle="#ffc94d"; rrect(ctx,a-2,gy-4,b-a+4,18,8); ctx.fill();
+      ctx.fillStyle="#e09a1a"; for(let i=a+6;i<b-4;i+=13){ ctx.beginPath(); ctx.arc(i,gy+3+((i*7)%5),2.2,0,Math.PI*2); ctx.fill(); }
+    });
+    // منصات مظلة المطعم
+    xg.plats.forEach(pl=>{
+      const a=pl.x0-cam, w=pl.x1-pl.x0, y=pl.y;
+      for(let i=0;i<w;i+=14){ ctx.fillStyle=(i/14)%2?"#fff":"#e4002b"; ctx.fillRect(a+i,y-4,Math.min(14,w-i),14); ctx.beginPath(); ctx.arc(a+i+7,y+10,7,0,Math.PI); ctx.fill(); }
+      ctx.fillStyle="#ffc72c"; ctx.fillRect(a,y-6,w,4);
+    });
+    // نار
+    const fl=performance.now()/90;
+    xg.spikes.forEach(sp=>{
+      const x=sp.x-cam;
+      [-11,0,11].forEach((dx,i)=>{ const h=(i===1?sp.h+6:sp.h)*(0.85+0.15*Math.sin(fl+i*2));
+        ctx.fillStyle="#ff3d00"; ctx.beginPath(); ctx.moveTo(x+dx-8,gy); ctx.quadraticCurveTo(x+dx-6,gy-h*.6,x+dx,gy-h); ctx.quadraticCurveTo(x+dx+6,gy-h*.6,x+dx+8,gy); ctx.closePath(); ctx.fill();
+        ctx.fillStyle="#ffd000"; ctx.beginPath(); ctx.moveTo(x+dx-4,gy); ctx.quadraticCurveTo(x+dx-3,gy-h*.4,x+dx,gy-h*.6); ctx.quadraticCurveTo(x+dx+3,gy-h*.4,x+dx+4,gy); ctx.closePath(); ctx.fill(); });
+    });
+    // ثعالب
+    xg.men.forEach(m=>{
+      const x=m.x-cam, sq=m.alive?1:Math.max(.15,1-m.squash*1.6), d=m.dir, st=Math.sin(performance.now()/90)*2;
+      ctx.save(); ctx.translate(x,gy); ctx.scale(1,sq);
+      ctx.fillStyle="#e8650f"; ctx.beginPath(); ctx.ellipse(-d*16,-16,12,6,d*.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-d*25,-20,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#e8650f"; ctx.beginPath(); ctx.ellipse(0,-16,15,10,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#5a2a08"; ctx.fillRect(-9,-8,4,8+st*.5); ctx.fillRect(6,-8,4,8-st*.5);
+      ctx.fillStyle="#e8650f"; ctx.beginPath(); ctx.arc(d*12,-28,9,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(d*6,-34); ctx.lineTo(d*8,-44); ctx.lineTo(d*12,-35); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(d*13,-35); ctx.lineTo(d*17,-44); ctx.lineTo(d*18,-33); ctx.closePath(); ctx.fill();
+      ctx.fillStyle="#fff"; ctx.beginPath(); ctx.moveTo(d*14,-28); ctx.lineTo(d*25,-25); ctx.lineTo(d*14,-21); ctx.closePath(); ctx.fill();
+      ctx.fillStyle="#111"; ctx.beginPath(); ctx.arc(d*25,-25,2,0,Math.PI*2); ctx.arc(d*12,-30,1.6,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+    // دجاج مقرمش
+    const bob=Math.sin(performance.now()/220)*2;
+    xg.gifts.forEach(gf=>{
+      if(gf.got) return; const x=gf.x-cam, y=gf.y+bob; if(x<-20||x>W+20) return;
+      ctx.save(); ctx.translate(x,y); ctx.rotate(-.6);
+      ctx.fillStyle="#f3efe6"; ctx.fillRect(5,-2,9,4); ctx.beginPath(); ctx.arc(14,-2.5,2.6,0,Math.PI*2); ctx.arc(14,2.5,2.6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#c96a12"; ctx.beginPath(); ctx.ellipse(-3,0,10,8,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#f0a63a"; [[-8,-3],[-4,3],[1,-4],[-1,1],[3,3]].forEach(([a,b])=>{ ctx.beginPath(); ctx.arc(a,b,1.8,0,Math.PI*2); ctx.fill(); });
+      ctx.restore();
+    });
+    drawChicken(ctx,xg.sx,xg.y,xg.runT,!xg.onGround, xg.inv>0 && Math.floor(xg.inv*10)%2===0);
+  }else{
   // السما
   const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#071430"); sky.addColorStop(1,"#1d3b6e");
   ctx.fillStyle=sky; ctx.fillRect(-10,-10,W+20,H+20);
@@ -924,9 +1028,9 @@ function drawXmas(){
   });
   // الهدايا
   const bob=Math.sin(performance.now()/220)*2;
-  xg.gifts.forEach(g=>{
-    if(g.got) return; const x=g.x-cam, y=g.y+bob; if(x<-20||x>W+20) return;
-    ctx.fillStyle=g.c; rrect(ctx,x-9,y-9,18,16,3); ctx.fill();
+  xg.gifts.forEach(gf=>{
+    if(gf.got) return; const x=gf.x-cam, y=gf.y+bob; if(x<-20||x>W+20) return;
+    ctx.fillStyle=gf.c; rrect(ctx,x-9,y-9,18,16,3); ctx.fill();
     ctx.fillStyle="#fff"; ctx.fillRect(x-1.5,y-9,3,16); ctx.fillRect(x-9,y-3,18,3);
     ctx.beginPath(); ctx.ellipse(x-4,y-11,4,2.6,-.5,0,Math.PI*2); ctx.ellipse(x+4,y-11,4,2.6,.5,0,Math.PI*2); ctx.fill();
   });
@@ -935,6 +1039,7 @@ function drawXmas(){
   ctx.fillStyle="rgba(255,255,255,.85)";
   const now=performance.now()/1000;
   xg.flakes.forEach(f=>{ f.y+=f.v*(1/60); if(f.y>H) { f.y=-4; f.x=Math.random()*W; } const fx=(f.x - (cam*.3)%W + W + Math.sin(now+f.d)*8)%W; ctx.beginPath(); ctx.arc(fx,f.y,f.r,0,Math.PI*2); ctx.fill(); });
+  }
   // نقاط
   ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="900 18px Cairo, sans-serif";
   xg.pops.forEach(q=>{ ctx.globalAlpha=1-q.t/.8; ctx.fillStyle=q.c; ctx.fillText(q.s,q.x-cam,q.y-q.t*45); });
@@ -1019,8 +1124,26 @@ function applyRestaurant(){
   $("pourChip1").textContent="⏱ "+pourSecs()+" ثانية · 🎯 "+pourNeed()+" من 6";
   const games=Array.isArray(REST.games)&&REST.games.length?REST.games:["catch","memory","pour"];
   [["goDelivery","delivery"],["goXmas","xmas"],["goCatch","catch"],["goMemory","memory"],["goPour","pour"]].forEach(([id,gm])=>{ $(id).style.display=games.includes(gm)?"":"none"; });
-  const XC=xmasCfg(); $("xmasChip1").textContent="⏱ "+XC.seconds+" ثانية · 🎁 "+XC.target;
+  const XC=xmasCfg(); $("xmasChip1").textContent="⏱ "+XC.seconds+" ثانية · "+(isKudo()?"🍗 ":"🎁 ")+XC.target;
   $("landTitle").textContent="ألعاب "+REST.name;
+  document.body.classList.toggle("skin-kudo", isKudo());
+  $("landSub").textContent = isKudo() ? "🍗 العب واربح وجبات وخصومات 🍗" : "🎄 العب واربح وجبة مجانية 🎄";
+  const hero=$("landHero"); hero.innerHTML="";
+  if(REST.hero && /^[\w\-./]+$/.test(REST.hero)){ const im=document.createElement("img"); im.src=REST.hero; im.alt=REST.name; hero.appendChild(im); hero.style.display=""; } else hero.style.display="none";
+  // ترتيب الألعاب حسب إعداد المطعم
+  const gl=$("goCatch").parentElement, idOf={delivery:"goDelivery",xmas:"goXmas",catch:"goCatch",memory:"goMemory",pour:"goPour"};
+  games.forEach(gm=>{ if(idOf[gm]) gl.appendChild($(idOf[gm])); });
+  if(isKudo()){
+    $("goXmas").querySelector(".ico").textContent="🐔";
+    $("goXmas").querySelector("h3").textContent="مغامرة كودو 🐔";
+    $("goXmas").querySelector("p").textContent="اقفز، اجمع الدجاج المقرمش، وانطّ فوگ الثعالب 🦊";
+    $("xmasTitle").textContent="🐔 مغامرة كودو";
+    $("xmasHint").innerHTML="اضغط حتى تقفز الدجاجة — <b>اضغط أطول = قفزة أعلى</b><br>اجمع الدجاج المقرمش 🍗، انتبه للحفر والنار 🔥، وانطّ فوگ الثعلب 🦊 حتى تطيّحه";
+    $("goDelivery").querySelector("h3").textContent="وصّل طلب كودو 🛵";
+    $("goDelivery").querySelector("p").innerHTML="مع تطبيق <b>جيتك</b> — وصّل دجاج KUDO KUDO وتجنّب الزحمة";
+    $("goCatch").querySelector(".ico").textContent="🍗";
+    $("goCatch").querySelector("p").textContent="حرّك الصينية واجمع الدجاج المقرمش والبركر والرول — وتجنّب 💣";
+  }
   const ll=$("landLogo"); ll.innerHTML="";
   if(/[\/.]/.test(REST.logo||"")){ const im=document.createElement("img"); im.src=REST.logo; im.alt=REST.name; ll.appendChild(im); } else ll.textContent=REST.logo||"🍽️";
   const DC=delCfg(); $("delChip1").textContent="⏱ "+DC.seconds+" ثانية · 📦 "+DC.target+" طلب";
