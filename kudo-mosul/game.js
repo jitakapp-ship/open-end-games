@@ -13,7 +13,7 @@ const DEFAULT_FOODS = ["🍗","🍔","🌯","🍗","🍟","🥤"];
 let REST = null;       // إعدادات المطعم من السيرفر
 const isKudo = () => true;
 const IMG = src => { const i=new Image(); i.src=src; return i; };
-const RUNNER = IMG("assets/run.png"), BIKER = IMG("assets/bike.png");
+const RUNNER = IMG("assets/run.png"), SCOOTER = IMG("assets/scooter.png");
 
 /* ---------- الأصوات ---------- */
 // ضع الملفات بمجلد assets بهذي الأسماء: music.mp3 (أثناء اللعب) و win.mp3 (عند الفوز)
@@ -257,9 +257,9 @@ function catchHud(left){
   $("cBar").classList.toggle("low",left<=7);
 }
 function spawn(p){
-  const bad=Math.random()<0.16+0.12*p;
+  const bad=Math.random()<0.2+0.14*p;
   cg.items.push({ bad, e: bad?"💣":cg.foods[Math.floor(Math.random()*cg.foods.length)],
-    x: 26+Math.random()*(cg.W-52), y:-30, v:(240+320*p)*(0.85+Math.random()*0.35),
+    x: 26+Math.random()*(cg.W-52), y:-30, v:(265+345*p)*(0.85+Math.random()*0.35),
     r:0, vr:(Math.random()-.5)*3 });
 }
 function catchLoop(t){
@@ -267,7 +267,7 @@ function catchLoop(t){
   const dt=Math.min(0.05,(t-cg.last)/1000); cg.last=t;
   const el=(t-cg.started)/1000, C=cg.C, left=C.seconds-el, p=Math.min(1,el/C.seconds);
   cg.acc+=dt*1000;
-  if(cg.acc>=480-240*p){ cg.acc=0; spawn(p); }
+  if(cg.acc>=440-220*p){ cg.acc=0; spawn(p); }
   const by=cg.H-44;
   cg.items=cg.items.filter(it=>{
     it.y+=it.v*dt; it.r+=it.vr*dt;
@@ -359,7 +359,7 @@ function dHud(left){
   $("dDist").textContent="📍 "+(REST?REST.name:"")+" — باقي "+km.toFixed(1)+" كم";
 }
 function laneX(l){ return dg.roadL+dg.laneW*(l+.5); }
-function delSpeed(p){ return 260+250*p; }
+function delSpeed(p){ return 285+265*p; }
 function delSpawnRow(p){
   // نضمن دايماً أكو مسار مفتوح يوصله اللاعب من المسار المفتوح بالصف اللي قبله
   const prev=dg.lastFree||[0,1,2];
@@ -392,7 +392,7 @@ function delLoop(t){
   const D=dg.D, el=(t-dg.started)/1000, left=D.seconds-el, p=Math.min(1,el/D.seconds);
   const v=delSpeed(p), move=v*dt;
   dg.scroll+=move; dg.rowAcc+=move; dg.signAcc+=dt;
-  if(dg.rowAcc>=320-115*p){ dg.rowAcc=0; delSpawnRow(p); }
+  if(dg.rowAcc>=300-110*p){ dg.rowAcc=0; delSpawnRow(p); }
   if(dg.signAcc>=8.5){ dg.signAcc=0; delSign(); }
   dg.x+=(laneX(dg.lane)-dg.x)*Math.min(1,dt*20);
   if(dg.inv>0) dg.inv-=dt;
@@ -424,17 +424,17 @@ function finishDelivery(completed){
   if(!dg||dg.done) return;
   const s=dg.score, D=dg.D; stopDelivery();
   submitResult(s, completed, {
-    extra: completed ? "وصّلت "+s+" طلب كودو بالموصل 🚲" : "وصّلت "+s+" طلب قبل ما تتصادم 3 مرات",
+    extra: completed ? "وصّلت "+s+" طلب كودو بالموصل 🛵" : "وصّلت "+s+" طلب قبل ما تتصادم 3 مرات",
     clientPassed: completed && s>=D.target,
     failMsg: completed ? "ما وصّلت طلبات كافية" : "تصادمت 3 مرات"
   });
 }
 function drawScooter(ctx,x,y,blink){
   if(blink) ctx.globalAlpha=.35;
-  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(x+2,y+34,18,7,0,0,Math.PI*2); ctx.fill();
-  if(BIKER.complete && BIKER.naturalWidth){
-    const h=84, w=h*BIKER.naturalWidth/BIKER.naturalHeight, wob=Math.sin(performance.now()/90)*.03;
-    ctx.save(); ctx.translate(x,y+36); ctx.rotate(wob); ctx.drawImage(BIKER,-w*.66,-h,w,h); ctx.restore();
+  ctx.fillStyle="rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(x+6,y+30,16,8,0,0,Math.PI*2); ctx.fill();
+  if(SCOOTER.complete && SCOOTER.naturalWidth){
+    const h=92, w=h*SCOOTER.naturalWidth/SCOOTER.naturalHeight, wob=Math.sin(performance.now()/110)*.025;
+    ctx.save(); ctx.translate(x,y+36); ctx.rotate(wob); ctx.drawImage(SCOOTER,-w*.6,-h,w,h); ctx.restore();
   }else{
     ctx.fillStyle="#e4002b"; rrect(ctx,x-11,y-28,22,50,9); ctx.fill();
     ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x,y-8,10,0,Math.PI*2); ctx.fill();
@@ -513,7 +513,7 @@ const XG=2300, XJUMP=-800, XCUT=-330;
 const GIFT_COLORS=["#e63946","#2a9d8f","#f4c430","#9b5de5","#ff7f11"];
 function xmasCfg(){ const d=(REST&&REST.xmas)||{}; return { seconds:d.seconds||45, target:d.target||35 }; }
 function stopXmas(){ if(xg){ xg.done=true; cancelAnimationFrame(xg.raf); clearTimeout(xg.cd); } }
-function xSpeed(p){ return 220+110*p; }
+function xSpeed(p){ return 245+125*p; }
 function startXmas(){
   stopAll();
   const C=xmasCfg(), wrap=$("xmasWrap"), cv=$("xmasCv");
@@ -560,8 +560,8 @@ function xGen(p){
     if(type==="flat"){
       const len=rnd(260,400), seg={x0:x,x1:x+len}; xg.ground.push(seg);
       const mid=x+len/2, roll=Math.random();
-      if(p>.08 && roll<.34+.25*p){ xg.spikes.push({x:mid,w:34,h:22}); if(wantGifts) xGiftArc(mid-60,mid+60,gy-46,3,60); }
-      else if(p>.12 && len>=300 && roll<.62+.2*p){ xg.men.push({x:x+len*.7,seg,alive:true,dir:-1,v:30+30*p,squash:0}); if(wantGifts) xGiftArc(x+60,x+170,gy-30,3,0); }
+      if(p>.06 && roll<.40+.25*p){ xg.spikes.push({x:mid,w:34,h:22}); if(wantGifts) xGiftArc(mid-60,mid+60,gy-46,3,60); }
+      else if(p>.1 && len>=300 && roll<.68+.2*p){ xg.men.push({x:x+len*.7,seg,alive:true,dir:-1,v:40+35*p,squash:0}); if(wantGifts) xGiftArc(x+60,x+170,gy-30,3,0); }
       else if(wantGifts) xGiftArc(x+60,x+len-60,gy-30,3,0);
       xg.genX=seg.x1;
     }else if(type==="gap"){
@@ -643,15 +643,40 @@ function finishXmas(completed){
     failMsg: completed ? (isKudo()?"ما جمعت دجاج كافي":"ما جمعت هدايا كافية") : "خلصت المحاولات"
   });
 }
+// نقص الجزمتين من صورة الركض حتى نحركهن
+let RUN_PARTS=null;
+function buildRunParts(){
+  if(RUN_PARTS) return RUN_PARTS;
+  if(!(RUNNER.complete && RUNNER.naturalWidth)) return null;
+  const W=RUNNER.naturalWidth, H=RUNNER.naturalHeight, k=W/317;
+  const BACK=[[94,188],[118,177],[143,183],[147,206],[133,231],[110,237],[92,229]];
+  const FRONT=[[216,207],[243,192],[268,183],[303,182],[306,211],[279,248],[256,264],[225,261],[214,236]];
+  const poly=(c,pts)=>{ c.beginPath(); pts.forEach(([px,py],i)=>i?c.lineTo(px*k,py*k):c.moveTo(px*k,py*k)); c.closePath(); };
+  const mk=()=>{ const c=document.createElement("canvas"); c.width=W; c.height=H; return c; };
+  const body=mk(), bc=body.getContext("2d");
+  bc.drawImage(RUNNER,0,0); bc.globalCompositeOperation="destination-out"; poly(bc,BACK); bc.fill(); poly(bc,FRONT); bc.fill();
+  const part=pts=>{ const c=mk(), x=c.getContext("2d"); x.save(); poly(x,pts); x.clip(); x.drawImage(RUNNER,0,0); x.restore(); return c; };
+  RUN_PARTS={ body, back:part(BACK), front:part(FRONT), bp:[131*k,187*k], fp:[238*k,202*k], W, H, k };
+  return RUN_PARTS;
+}
 function drawMascot(ctx,x,y,t,air,blink){
-  if(!(RUNNER.complete && RUNNER.naturalWidth)) return drawChicken(ctx,x,y,t,air,blink);
-  const h=74, w=h*RUNNER.naturalWidth/RUNNER.naturalHeight;
+  const P=buildRunParts();
+  if(!P) return drawChicken(ctx,x,y,t,air,blink);
+  const h=76, s=h/P.H, ph=t*2.3;
   if(blink) ctx.globalAlpha=.35;
   if(!air){ ctx.fillStyle="rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(x+4,y+2,20,4.5,0,0,Math.PI*2); ctx.fill(); }
-  const ph=t*2.2, bob=air?0:Math.abs(Math.sin(ph))*4, sq=air?1:1+Math.sin(ph*2)*.025;
-  ctx.save(); ctx.translate(x,y+2-bob); ctx.rotate(air?-.1:Math.sin(ph)*.035); ctx.scale(1/sq,sq);
-  // الجسم بنص العرض تقريباً (العباية لورا)
-  ctx.drawImage(RUNNER,-w*.6,-h,w,h);
+  const bob=air?0:Math.abs(Math.sin(ph))*4;
+  const swing=air?0:Math.sin(ph)*0.55;
+  ctx.save();
+  ctx.translate(x,y+3-bob); ctx.rotate(air?-.1:Math.sin(ph*2)*.025); ctx.scale(s,s); ctx.translate(-P.W*.6,-P.H);
+  const leg=(cv,pv,ang)=>{
+    ctx.save(); ctx.translate(pv[0],pv[1]); ctx.rotate(ang);
+    ctx.fillStyle="#f3ece4"; ctx.beginPath(); ctx.ellipse(0,-2,11*P.k,9*P.k,0,0,Math.PI*2); ctx.fill();
+    ctx.translate(-pv[0],-pv[1]); ctx.drawImage(cv,0,0); ctx.restore();
+  };
+  leg(P.back, P.bp, air? .45 : -swing);
+  ctx.drawImage(P.body,0,0);
+  leg(P.front, P.fp, air? -.35 : swing);
   ctx.restore(); ctx.globalAlpha=1;
 }
 function drawChicken(ctx,x,y,t,air,blink){

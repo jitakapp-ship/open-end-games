@@ -79,7 +79,7 @@
   .ico.c3{background:linear-gradient(160deg,#FFD84D,#FF8A00)}
   .ico img{width:100%;height:100%;object-fit:contain;display:block}
   .ico.c2 img{object-fit:cover;object-position:60% 20%;transform:scale(1.25)}
-  .ico.c3 img{object-fit:cover;object-position:50% 10%;transform:scale(1.15)}
+  .ico.c3 img{object-fit:cover;object-position:50% 35%;transform:scale(1.05)}
   .sound{position:fixed;top:12px;left:12px;z-index:110;width:44px;height:44px;border-radius:50%;border:0;font-size:1.2rem;
     background:rgba(255,255,255,.92);color:#3d0006;box-shadow:0 4px 12px rgba(0,0,0,.25)}
   .game-btn .txt{flex:1;min-width:0}
@@ -221,10 +221,10 @@
       <span class="go">▶</span>
     </button>
     <button class="game-btn" id="goDelivery">
-      <span class="ico c3"><img src="assets/bike.png" alt=""></span>
+      <span class="ico c3"><img src="assets/scooter.png" alt=""></span>
       <span class="txt">
         <h3>توصيل كودو السريع</h3>
-        <p>كودو على دراجته يوصّل طلباتكم بالموصل — تجنّب السيارات والحفر 🚲</p>
+        <p>كودو على السكوتر يوصّل طلباتكم بالموصل — تجنّب السيارات والحفر 🛵</p>
         <span class="chips"><span class="chip" id="delChip1"></span><span class="chip" id="delChip2"></span></span>
       </span>
       <span class="go">▶</span>
@@ -262,7 +262,7 @@
 
 <!-- توصيل كودو -->
 <section class="screen" id="deliveryScreen">
-  <div class="topbar"><button class="backbtn" data-home>→ رجوع</button><h2>🚲 توصيل كودو</h2><span class="spacer"></span></div>
+  <div class="topbar"><button class="backbtn" data-home>→ رجوع</button><h2>🛵 توصيل كودو</h2><span class="spacer"></span></div>
   <div class="hud"><span class="goal" id="dGoal"></span><span id="dLives"></span><span id="dTime"></span></div>
   <div class="timebar" id="dBar"><i id="dFill"></i></div>
   <div class="dist" id="dDist"></div>
@@ -305,6 +305,6 @@
 
 <script src="config.js?v=2"></script>
 <script src="api.js?v=2"></script>
-<script src="game.js?v=2"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>
