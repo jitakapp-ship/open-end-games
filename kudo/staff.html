@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="assets/logo.png">
+<meta name="theme-color" content="#B0001A">
+<title>كاشير KUDO KUDO — فرع الموصل</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#14110f;--card:#221c18;--line:rgba(255,255,255,.09);--text:#fff7ec;--muted:#b9a897;--accent:#F2A541;--ok:#3fbf7f;--bad:#ff5a4f;--warn:#f5c04a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Cairo',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  button,input{font-family:inherit}
+  .wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  header h1{font-size:1.25rem;margin:0}
+  header small{color:var(--muted);display:block;font-weight:400}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+  label{display:block;font-size:.9rem;color:var(--muted);margin:0 0 6px}
+  input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#16120f;color:var(--text);font-size:1.05rem;margin-bottom:12px;outline:none}
+  input:focus{border-color:var(--accent)}
+  #code{font-size:1.6rem;font-weight:900;letter-spacing:3px;text-align:center;direction:ltr;text-transform:uppercase;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .btn{width:100%;border:0;border-radius:12px;padding:13px;font-size:1.05rem;font-weight:900;background:var(--accent);color:#1a1410;cursor:pointer}
+  .btn:disabled{opacity:.5}
+  .btn.ok{background:var(--ok);color:#06210f}
+  .link{background:none;border:0;color:var(--muted);cursor:pointer;font-size:.9rem;text-decoration:underline}
+  .err{color:var(--bad);font-weight:700;min-height:1.4em;margin:0 0 8px}
+  .res{border-radius:16px;padding:16px;margin-top:14px;display:none}
+  .res.show{display:block}
+  .res.valid{background:rgba(63,191,127,.12);border:1px solid rgba(63,191,127,.45)}
+  .res.used{background:rgba(255,90,79,.1);border:1px solid rgba(255,90,79,.45)}
+  .res.expired{background:rgba(245,192,74,.1);border:1px solid rgba(245,192,74,.45)}
+  .res h2{margin:0 0 6px;font-size:1.3rem}
+  .res .prize{font-size:1.7rem;font-weight:900;color:var(--accent);margin:4px 0 10px}
+  .res dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 12px;font-size:.95rem}
+  .res dt{color:var(--muted)}
+  .res dd{margin:0;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+  .stat{background:#16120f;border-radius:12px;padding:10px 4px}
+  .stat b{display:block;font-size:1.5rem}
+  .stat span{font-size:.78rem;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:12px}
+  th,td{padding:7px 4px;text-align:center;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:700}
+  .row{display:flex;justify-content:space-between;align-items:center}
+  .foot{text-align:center;color:var(--muted);font-size:.78rem;margin-top:24px}
+  .hidden{display:none}
+  /* ---- KUDO KUDO ---- */
+  :root{--bg:#2a0006;--card:#4a0610;--line:rgba(255,199,44,.22);--text:#fff;--muted:#ffcfc6;--accent:#FFC72C}
+  body{background:linear-gradient(180deg,#B0001A 0%,#6b0010 40%,#2a0006 100%);background-attachment:fixed}
+  header h1{font-family:'Lalezar','Cairo',sans-serif;font-weight:400;font-size:1.6rem}
+  .kbrand{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .kbrand img{width:54px;height:54px;border-radius:14px;background:#fff;padding:4px}
+  .kbrand b{font-family:'Lalezar','Cairo',sans-serif;font-weight:400;font-size:1.5rem;direction:ltr}
+  .btn{background:linear-gradient(180deg,#FFD84D,#FFB000);color:#3d0006}
+  input{background:#2a0006}
+
+  .meal{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:#16120f}
+  .meal.off{opacity:.55}
+  .meal .top{display:flex;gap:10px;align-items:center}
+  .meal .top input[type=text],.meal .top input[type=number]{margin:0;flex:1;font-weight:700}
+  .sw{display:flex;align-items:center;gap:6px;color:var(--text);font-size:.9rem;white-space:nowrap;margin:0;cursor:pointer}
+  .sw input{width:22px;height:22px;margin:0;accent-color:var(--ok)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .two label{margin:0 0 4px}
+  .two input{margin:0}
+  .days{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+  .day{flex:1;min-width:42px;padding:7px 0;border-radius:9px;border:1px solid var(--line);background:none;color:var(--muted);font-family:inherit;font-size:.8rem;cursor:pointer}
+  .day.on{background:var(--accent);color:#1a1410;border-color:var(--accent);font-weight:700}
+  .mrow{display:flex;gap:10px;align-items:center}
+  .mrow .btn{width:auto;padding:10px 18px;font-size:.95rem}
+  .mmsg{font-size:.85rem;font-weight:700}
+  .small{font-size:.85rem;color:var(--muted);margin:0 0 10px;line-height:1.7}
+  input[type=range]{padding:0;border:0;background:none;accent-color:var(--accent);height:34px;margin:4px 0 6px}
+  .btn.ghost{background:rgba(255,255,255,.08);color:var(--text)}
+  .big{font-size:1.6rem;font-weight:900;color:var(--accent)}
+  .okmsg{color:var(--ok);font-weight:700;min-height:1.4em;margin:0 0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kbrand"><img src="assets/logo.png" alt="KUDO KUDO"><div><b>KUDO KUDO</b><div style="color:var(--muted);font-size:.85rem">فرع الموصل — صفحة الكاشير</div></div></div>
+
+  <!-- تسجيل الدخول -->
+  <section id="login">
+    <header><h1>🔐 صفحة الكاشير<small>التحقق من كوبونات الألعاب</small></h1></header>
+    <div class="card">
+      <div id="slugBox">
+        <label for="slug">معرّف المطعم</label>
+        <input id="slug" autocomplete="off" autocapitalize="off" placeholder="مثلاً: demo" dir="ltr">
+      </div>
+      <label for="pin">رمز الكاشير</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••">
+      <p class="err" id="loginErr"></p>
+      <button class="btn" id="loginBtn">دخول</button>
+    </div>
+  </section>
+
+  <!-- لوحة الكاشير -->
+  <section id="panel" class="hidden">
+    <header>
+      <h1 id="restName">—<small>صفحة الكاشير</small></h1>
+      <button class="link" id="logout">خروج</button>
+    </header>
+
+    <div class="card">
+      <label for="code">رمز الكوبون</label>
+      <input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC12">
+      <p class="err" id="codeErr"></p>
+      <button class="btn" id="checkBtn">تحقق</button>
+
+      <div class="res" id="res">
+        <h2 id="resTitle"></h2>
+        <div class="prize" id="resPrize"></div>
+        <dl>
+          <dt>الرمز</dt><dd id="resCode" dir="ltr" style="text-align:right"></dd>
+          <dt>اللعبة</dt><dd id="resGame"></dd>
+          <dt>وقت الربح</dt><dd id="resTime"></dd>
+          <dt id="resUsedL">وقت الاستخدام</dt><dd id="resUsed"></dd>
+        </dl>
+        <button class="btn ok" id="redeemBtn">✅ تأكيد تسليم الهدية</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row"><b>📊 اليوم</b><button class="link" id="refresh">تحديث</button></div>
+      <div class="stats" style="margin-top:10px">
+        <div class="stat"><b id="sPlays">0</b><span>لعبوا</span></div>
+        <div class="stat"><b id="sWon">0</b><span>ربحوا</span></div>
+        <div class="stat"><b id="sRedeemed">0</b><span>استلموا</span></div>
+        <div class="stat"><b id="sLeft">0</b><span>هدايا باقية</span></div>
+      </div>
+      <div id="prizesBox" class="hidden">
+        <b style="display:block;margin:14px 0 4px">🍽️ وجبات اليوم</b>
+        <table>
+          <thead><tr><th>الوجبة</th><th>ربحوها</th><th>استلموها</th><th>الحد</th></tr></thead>
+          <tbody id="prizes"></tbody>
+        </table>
+      </div>
+      <table>
+        <thead><tr><th>اليوم</th><th>لعبوا</th><th>نجحوا</th><th>ربحوا</th><th>استلموا</th></tr></thead>
+        <tbody id="days"></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="ownerCard">
+      <b>⚙️ إعدادات صاحب المطعم</b>
+      <div id="ownerLogin" style="margin-top:10px">
+        <p class="small">هذا القسم لصاحب المطعم فقط، ويحتاج رمز المالك (غير رمز الكاشير).</p>
+        <input id="ownerPin" type="password" inputmode="numeric" autocomplete="off" placeholder="رمز المالك">
+        <p class="err" id="ownerErr"></p>
+        <button class="btn ghost" id="ownerBtn">فتح الإعدادات</button>
+      </div>
+      <div id="ownerForm" class="hidden" style="margin-top:12px">
+        <div id="wrBlock">
+        <label for="wr">نسبة الفوز</label>
+        <div class="big" id="wrVal">15%</div>
+        <input type="range" id="wr" min="0" max="100" step="1" dir="ltr">
+        <p class="small" id="wrHint"></p>
+        </div>
+        <label for="lim">أقصى عدد هدايا باليوم</label>
+        <input id="lim" type="number" inputmode="numeric" min="0" max="10000">
+        <label for="interval">أقل مدة بين جائزة وجائزة (بالدقائق)</label>
+        <input id="interval" type="number" inputmode="numeric" min="0" max="1440">
+        <p class="small" style="margin-top:-6px">60 = جائزة وحدة كل ساعة كحد أقصى · 0 = بدون انتظار</p>
+        <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text);margin:2px 0 12px;cursor:pointer">
+          <input type="checkbox" id="oneWin" style="width:22px;height:22px;margin:3px 0 0;flex:none;accent-color:var(--accent)">
+          <span><b>كل زبون يربح مرة وحدة بس</b><br><span class="small" style="display:block;margin:2px 0 0">يكدر يلعب أكثر من مرة، بس إذا ربح قبل ما يربح مرة ثانية.</span></span>
+        </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;color:var(--text);margin:2px 0 12px;cursor:pointer">
+          <input type="checkbox" id="strict" style="width:22px;height:22px;margin:3px 0 0;flex:none;accent-color:var(--accent)">
+          <span><b>قفل صارم</b><br><span class="small" style="display:block;margin:2px 0 0">يمنع نفس التلفون يلعب مرة ثانية خلال 24 ساعة حتى لو بدّل المتصفح أو فتح خفي. نادراً ممكن يمنع زبون ثاني عنده نفس نوع التلفون ومتصل بنفس الواي فاي.</span></span>
+        </label>
+        <p class="err" id="ownerErr2"></p>
+        <p class="okmsg" id="ownerOk"></p>
+        <button class="btn" id="saveOwner">حفظ الإعدادات</button>
+
+        <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
+          <b>🎁 الجوائز (وجبات وخصومات)</b>
+          <p class="small" style="margin-top:6px">كل وجبة إلها نسبة فوز: <b>1%</b> يعني من كل 100 زبون ينجح باللعبة، تقريباً واحد يربحها. الحد اليومي: فارغ = بدون حد خاص. الجائزة تكدر تكون وجبة أو خصم بنسبة تحددها، وتكدر تحدد أي جائزة بأي لعبة تطلع.</p>
+          <div id="meals"></div>
+          <button class="btn ghost" id="addMeal">+ إضافة جائزة</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">مقدّم من <b id="company"></b></div>
+</div>
+
+<script src="config.js?v=1"></script>
+<script src="api.js?v=1"></script>
+<script src="staff.js?v=1"></script>
+</body>
+</html>
