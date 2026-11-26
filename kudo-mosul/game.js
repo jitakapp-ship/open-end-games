@@ -334,10 +334,10 @@ function bucketGeom(){
   return {top,rimY,half,left};
 }
 function spawn(p){
-  const bad=Math.random()<0.2+0.14*p, r=Math.random();
+  const bad=Math.random()<0.17+0.12*p, r=Math.random();
   const kind = bad ? "bomb" : r<.45 ? "crispy" : r<.75 ? "tender" : "wrap";
   cg.items.push({ kind, img: CRISPY[Math.floor(Math.random()*CRISPY.length)], flip: Math.random()<.5,
-    x: 26+Math.random()*(cg.W-52), y:-34, v:(265+345*p)*(0.85+Math.random()*0.35),
+    x: 26+Math.random()*(cg.W-52), y:-34, v:(245+320*p)*(0.85+Math.random()*0.35),
     r:Math.random()*Math.PI, vr:(Math.random()-.5)*3 });
 }
 function catchLoop(t){
@@ -345,7 +345,7 @@ function catchLoop(t){
   const dt=Math.min(0.05,(t-cg.last)/1000); cg.last=t;
   const el=(t-cg.started)/1000, C=cg.C, left=C.seconds-el, p=Math.min(1,el/C.seconds);
   cg.acc+=dt*1000;
-  if(cg.acc>=440-220*p){ cg.acc=0; spawn(p); }
+  if(cg.acc>=470-230*p){ cg.acc=0; spawn(p); }
   const B=bucketGeom();
   cg.items=cg.items.filter(it=>{
     const prevY=it.y; it.y+=it.v*dt; it.r+=it.vr*dt;
@@ -367,6 +367,17 @@ function catchLoop(t){
 function rrect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
   ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
   ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); }
+function drawBomb(ctx,t){
+  const g=ctx.createRadialGradient(-5,-5,2,0,0,17); g.addColorStop(0,"#5a5566"); g.addColorStop(.5,"#25222c"); g.addColorStop(1,"#0d0c10");
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,2,15,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="#ffd84d"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,2,15,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle="rgba(255,255,255,.55)"; ctx.beginPath(); ctx.ellipse(-5,-4,4,2.6,-.6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#3a3644"; ctx.fillRect(-4,-17,8,6);
+  ctx.strokeStyle="#c8a46a"; ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(0,-17); ctx.quadraticCurveTo(6,-24,11,-21); ctx.stroke();
+  const s=4+Math.sin(t*25)*1.6;
+  ctx.fillStyle="#ff6a00"; ctx.beginPath(); ctx.arc(12,-22,s,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#ffe14d"; ctx.beginPath(); ctx.arc(12,-22,s*.5,0,Math.PI*2); ctx.fill();
+}
 function drawTender(ctx){
   const g=ctx.createLinearGradient(-22,-8,22,8); g.addColorStop(0,"#f0ab45"); g.addColorStop(1,"#b5611b");
   ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,24,9.5,0,0,Math.PI*2); ctx.fill();
@@ -398,7 +409,7 @@ function drawCatch(){
   // الأكل النازل
   cg.items.forEach(it=>{
     ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.r);
-    if(it.kind==="bomb"){ ctx.font="36px system-ui, 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("💣",0,0); }
+    if(it.kind==="bomb"){ ctx.rotate(-it.r*.8); ctx.scale(1.15,1.15); drawBomb(ctx,performance.now()/1000); }
     else if(it.kind==="crispy" && it.img.complete && it.img.naturalWidth){ const s=50/Math.max(it.img.naturalWidth,it.img.naturalHeight); if(it.flip) ctx.scale(-1,1); ctx.drawImage(it.img,-it.img.naturalWidth*s/2,-it.img.naturalHeight*s/2,it.img.naturalWidth*s,it.img.naturalHeight*s); }
     else if(it.kind==="wrap"){ ctx.scale(1.1,1.1); drawWrap(ctx); }
     else { ctx.scale(1.05,1.05); drawTender(ctx); }
@@ -473,11 +484,11 @@ function dHud(left){
   $("dDist").textContent="📍 "+(REST?REST.name:"")+" — باقي "+km.toFixed(1)+" كم";
 }
 function laneX(l){ return dg.roadL+dg.laneW*(l+.5); }
-function delSpeed(p){ return 285+265*p; }
+function delSpeed(p){ return 265+245*p; }
 function delSpawnRow(p){
   // نضمن دايماً أكو مسار مفتوح يوصله اللاعب من المسار المفتوح بالصف اللي قبله
   const prev=dg.lastFree||[0,1,2];
-  let n=Math.random()<(0.2+0.3*p)?2:1, lanes;
+  let n=Math.random()<(0.18+0.27*p)?2:1, lanes;
   if(n===2){
     const ok=[0,1,2].filter(f=>prev.some(q=>Math.abs(q-f)<=1));
     const f=ok[Math.floor(Math.random()*ok.length)];
@@ -491,13 +502,13 @@ function delSpawnRow(p){
     else dg.ents.push({t:"bar",l,y:-50,w:lw*.82,h:20});
   });
   const free=lanes.slice(n);
-  if(Math.random()<0.34){ dg.ents.push({t:"bag",l:free[Math.floor(Math.random()*free.length)],y:-40,w:34,h:34}); }
+  if(Math.random()<0.34){ dg.ents.push({t:"bag",l:free[Math.floor(Math.random()*free.length)],y:-40,w:34,h:34,im:Math.random()<.5?0:1}); }
 }
 function delSign(){
   const D=dg.D, names=D.signs;
   const left=D.seconds-(performance.now()-dg.started)/1000;
   const txt = names.length ? names[dg.signIdx++ % names.length]
-                           : "📍 "+(REST?REST.name:"")+" ↑ "+Math.max(0.1,4*left/D.seconds-0.3).toFixed(1)+" كم";
+                           : (REST?REST.name:"")+" ↑ "+Math.max(0.1,4*left/D.seconds-0.3).toFixed(1)+" كم";
   dg.ents.push({t:"sign",l:1,y:-70,w:dg.roadW*.82,h:30,txt});
 }
 function delLoop(t){
@@ -506,7 +517,7 @@ function delLoop(t){
   const D=dg.D, el=(t-dg.started)/1000, left=D.seconds-el, p=Math.min(1,el/D.seconds);
   const v=delSpeed(p), move=v*dt;
   dg.scroll+=move; dg.rowAcc+=move; dg.signAcc+=dt;
-  if(dg.rowAcc>=300-110*p){ dg.rowAcc=0; delSpawnRow(p); }
+  if(dg.rowAcc>=315-110*p){ dg.rowAcc=0; delSpawnRow(p); }
   if(dg.signAcc>=8.5){ dg.signAcc=0; delSign(); }
   dg.x+=(laneX(dg.lane)-dg.x)*Math.min(1,dt*20);
   if(dg.inv>0) dg.inv-=dt;
@@ -518,10 +529,10 @@ function delLoop(t){
       const ex=laneX(e.l);
       const hitX=Math.abs(ex-px) < (e.w+pw)/2-4, hitY=Math.abs(e.y-py) < (e.h+ph)/2-6;
       if(hitX&&hitY){
-        if(e.t==="bag"){ dg.score++; buzz(10); sfx("collect"); dg.pops.push({x:ex,y:py-46,t:0,s:"+1 🍗",c:"#9ff0c2"}); return false; }
+        if(e.t==="bag"){ dg.score++; buzz(10); sfx("collect"); dg.pops.push({x:ex,y:py-46,t:0,s:"+1",c:"#ffd84d"}); return false; }
         if(dg.inv<=0){
           e.hit=true; dg.lives--; dg.inv=1.3; dg.shake=.4; buzz([80,40,80]); sfx("hit");
-          dg.pops.push({x:px,y:py-50,t:0,s:e.t==="hole"?"حفرة! 💥":"اصطدام! 💥",c:"#ff7a6e"});
+          dg.pops.push({x:px,y:py-50,t:0,s:e.t==="hole"?"حفرة!":"اصطدام!",c:"#ff7a6e"});
           if(dg.lives<=0){ dHud(left); drawDelivery(); return finishDelivery(false), false; }
         }
       }
@@ -574,10 +585,13 @@ function drawDelivery(){
   }
   // الشارع
   ctx.fillStyle="#2b2b31"; ctx.fillRect(roadL,-10,roadW,H+20);
-  ctx.fillStyle="#e9e9ef"; ctx.fillRect(roadL,-10,4,H+20); ctx.fillRect(roadL+roadW-4,-10,4,H+20);
-  ctx.fillStyle="rgba(255,255,255,.65)";
-  const dOff=dg.scroll%64;
-  for(let i=1;i<3;i++){ const x=roadL+laneW*i-2; for(let y=-64+dOff;y<H;y+=64) ctx.fillRect(x,y,4,34); }
+  // حواف وخطوط هادية: بدون وميض أبيض
+  ctx.fillStyle="rgba(255,199,44,.55)"; ctx.fillRect(roadL+2,-10,3,H+20); ctx.fillRect(roadL+roadW-5,-10,3,H+20);
+  ctx.fillStyle="rgba(255,255,255,.10)";
+  for(let i=1;i<3;i++){ ctx.fillRect(roadL+laneW*i-1,-10,2,H+20); }
+  ctx.fillStyle="rgba(255,255,255,.07)";
+  const dOff=dg.scroll%220;
+  for(let i=1;i<3;i++){ const x=roadL+laneW*i-3; for(let y=-220+dOff;y<H;y+=220) ctx.fillRect(x,y,6,120); }
   // العناصر
   ctx.textAlign="center"; ctx.textBaseline="middle";
   dg.ents.forEach(e=>{
@@ -592,11 +606,13 @@ function drawDelivery(){
       ctx.strokeStyle="#55525c"; ctx.lineWidth=3; ctx.stroke();
     }else if(e.t==="bar"){
       ctx.save(); rrect(ctx,x-e.w/2,y-e.h/2,e.w,e.h,4); ctx.clip();
-      for(let i=-2;i<12;i++){ ctx.fillStyle=i%2?"#fff":"#e63946"; ctx.beginPath(); const sx=x-e.w/2+i*12; ctx.moveTo(sx,y+e.h/2); ctx.lineTo(sx+12,y+e.h/2); ctx.lineTo(sx+24,y-e.h/2); ctx.lineTo(sx+12,y-e.h/2); ctx.closePath(); ctx.fill(); }
+      for(let i=-2;i<12;i++){ ctx.fillStyle=i%2?"#f3e2c4":"#d62839"; ctx.beginPath(); const sx=x-e.w/2+i*12; ctx.moveTo(sx,y+e.h/2); ctx.lineTo(sx+12,y+e.h/2); ctx.lineTo(sx+24,y-e.h/2); ctx.lineTo(sx+12,y-e.h/2); ctx.closePath(); ctx.fill(); }
       ctx.restore();
     }else if(e.t==="bag"){
       ctx.fillStyle="rgba(255,214,102,.28)"; ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2); ctx.fill();
-      ctx.font="28px system-ui, 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; ctx.fillText(isKudo()?"🍗":"🥡",x,y+1);
+      const im=CRISPY[e.im|0];
+      if(im.complete && im.naturalWidth){ const s=40/Math.max(im.naturalWidth,im.naturalHeight); ctx.drawImage(im,x-im.naturalWidth*s/2,y-im.naturalHeight*s/2,im.naturalWidth*s,im.naturalHeight*s); }
+      else { ctx.fillStyle="#c96a12"; ctx.beginPath(); ctx.ellipse(x,y,14,10,0,0,Math.PI*2); ctx.fill(); }
     }else if(e.t==="sign"){
       ctx.fillStyle="#5d5d66"; ctx.fillRect(roadL+6,y-e.h/2,4,e.h+18); ctx.fillRect(roadL+roadW-10,y-e.h/2,4,e.h+18);
       ctx.fillStyle="#1b7f3a"; rrect(ctx,dg.W/2-e.w/2,y-e.h/2,e.w,e.h,6); ctx.fill();
@@ -717,21 +733,21 @@ function xLoop(t){
   if(xg.shake>0) xg.shake-=dt;
   // وقع بحفرة
   if(xg.y>xg.H+60){
-    xg.inv=0; xHit("وقعت! 💥");
+    xg.inv=0; xHit("وقعت!");
     const next=xg.ground.find(s=>s.x1>xg.x+40);
     if(next){ xg.x=Math.max(next.x0+30,xg.x); }
     xg.y=xg.gy; xg.vy=0; xg.onGround=true;
   }
   // ثلج حاد
-  for(const sp of xg.spikes){ if(Math.abs(sp.x-xg.x)<sp.w/2+6 && xg.y>xg.gy-sp.h+5) xHit(isKudo()?"حار! 🔥":"آخ! 💥"); }
+  for(const sp of xg.spikes){ if(Math.abs(sp.x-xg.x)<sp.w/2+6 && xg.y>xg.gy-sp.h+5) xHit(isKudo()?"حار!":"آخ!"); }
   // رجال الثلج
   for(const m of xg.men){
     if(!m.alive){ m.squash+=dt; continue; }
     m.x+=m.dir*m.v*dt; if(m.x<m.seg.x0+20||m.x>m.seg.x1-20){ m.dir*=-1; m.x=Math.max(m.seg.x0+20,Math.min(m.seg.x1-20,m.x)); }
     const top=xg.gy-46;
     if(Math.abs(m.x-xg.x)<24 && xg.y>top && xg.y-42<xg.gy){
-      if(xg.vy>0 && prevY<=top+12){ m.alive=false; xg.vy=-560; xg.score+=2; buzz(20); sfx("stomp"); xg.pops.push({x:m.x,y:top-10,t:0,s:isKudo()?"+2 🦊":"+2 ⛄",c:"#9ff0c2"}); }
-      else xHit(isKudo()?"ثعلب! 💥":"رجل الثلج! 💥");
+      if(xg.vy>0 && prevY<=top+12){ m.alive=false; xg.vy=-560; xg.score+=2; buzz(20); sfx("stomp"); xg.pops.push({x:m.x,y:top-10,t:0,s:"+2",c:"#9ff0c2"}); }
+      else xHit(isKudo()?"ثعلب!":"رجل الثلج!");
     }
   }
   // الهدايا
