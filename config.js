@@ -1,8 +1,13 @@
 /* =========================================================
-   الإعداد الوحيد بالملفات — الباقي كله من Supabase
-   تلكاها بـ: Supabase ← Project Settings ← API (أو API Keys)
+   إعدادات الموقع
+   API_BASE: البوابة على Cloudflare (لا تغيّرها)
+   TURNSTILE_SITEKEY: المفتاح العام لـ Turnstile (من Cloudflare ← Turnstile)
+   SUPABASE_URL / SUPABASE_KEY: اتصال احتياطي مباشر — ينحذفن بعد قفل Supabase (خطوة 5)
    ========================================================= */
 window.APP = {
+  API_BASE: "/api",
+  TURNSTILE_SITEKEY: "",          // مثال: "0x4AAAAAAA...."
+
   SUPABASE_URL: "https://sanvupoolabgftggiati.supabase.co",
   SUPABASE_KEY: "sb_publishable_DzyBNO9y42ZwYkxq5iaUSg_j21cIEiz",   // المفتاح العام
 

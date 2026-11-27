@@ -127,7 +127,7 @@ $("goMemory").addEventListener("click",()=>startGame("memory"));
 $("goPour").addEventListener("click",()=>startGame("pour"));
 $("goDelivery").addEventListener("click",()=>startGame("delivery"));
 $("goXmas").addEventListener("click",()=>startGame("xmas"));
-$("playNow").addEventListener("click",()=>{ refreshHome(); show("home"); });
+$("playNow").addEventListener("click",()=>{ if(window.tsPrefetch) tsPrefetch(); refreshHome(); show("home"); });
 
 /* ---------- بداية ونهاية اللعبة (مع السيرفر) ---------- */
 async function startGame(game){
@@ -149,7 +149,10 @@ async function startGame(game){
     show({catch:"catchScreen",memory:"memoryScreen",pour:"pourScreen",delivery:"deliveryScreen",xmas:"xmasScreen"}[game]);
     ({catch:startCatch,memory:startMemory,pour:startPour,delivery:startDelivery,xmas:startXmas})[game]();
   }catch(e){
-    toast(String(e&&e.message).includes("rate_limited") ? "محاولات كثيرة — انتظر شوية وجرّب مرة ثانية" : "صار خلل بالاتصال، حاول مرة ثانية");
+    const m=String(e&&e.message);
+    toast(m.includes("rate_limited") ? "محاولات كثيرة — انتظر شوية وجرّب مرة ثانية"
+        : m.includes("bot_check") ? "ما كدرنا نتأكد من الجهاز — حدّث الصفحة وجرّب مرة ثانية"
+        : "صار خلل بالاتصال، حاول مرة ثانية");
   }finally{
     busy=false; btn.classList.remove("loading");
   }
@@ -1156,15 +1159,16 @@ async function init(){
     if(COMPANY.website){ const a=document.createElement("a"); a.href=COMPANY.website; a.target="_blank"; a.textContent=COMPANY.name; el.appendChild(a); }
     else el.textContent=COMPANY.name;
   });
-  if(!window.apiReady()){ $("noRestMsg").textContent="⚙️ لازم تحط رابط ومفتاح Supabase بملف config.js"; return show("noRest"); }
+  if(!window.apiReady()){ $("noRestMsg").textContent="⚙️ الإعداد ناقص بملف config.js"; return show("noRest"); }
   if(!SLUG) return show("noRest");
   showLoading("لحظة...");
   try{
-    REST = await api("game_get_restaurant",{p_slug:SLUG});
+    FP = await computeFP();
+    const boot = await apiBoot(SLUG, DEVICE, FP) || {};
+    REST = boot.rest;
     if(!REST) return show("noRest");
     applyRestaurant();
-    FP = await computeFP();
-    const st = await api("game_check",{p_slug:SLUG,p_device:DEVICE,p_fp:FP}) || {};
+    const st = boot.check || {};
     todayPlay = st.own ? st.play : null;
     lockInfo = (st.next_at && !st.own) ? {next_at:st.next_at} : null;
     refreshHome(); show("landing");
