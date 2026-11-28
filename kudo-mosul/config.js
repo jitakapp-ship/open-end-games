@@ -6,7 +6,7 @@
    ========================================================= */
 window.APP = {
   API_BASE: "/api",
-  TURNSTILE_SITEKEY: "",          // مثال: "0x4AAAAAAA...."
+  TURNSTILE_SITEKEY: "0x4AAAAAAGWb6RAUcGlf6edO",
 
   SUPABASE_URL: "https://sanvupoolabgftggiati.supabase.co",
   SUPABASE_KEY: "sb_publishable_DzyBNO9y42ZwYkxq5iaUSg_j21cIEiz",   // المفتاح العام
